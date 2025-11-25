@@ -1,36 +1,100 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+📹 WebRTC Video Calling App
 
-## Getting Started
+A real-time peer-to-peer (P2P) video calling application built using:
 
-First, run the development server:
+Next.js 15 (App Router)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+WebRTC (P2P audio/video + screen sharing)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Socket.IO (signaling server)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+TypeScript
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Tailwind CSS
 
-## Learn More
+Lucide Icons
 
-To learn more about Next.js, take a look at the following resources:
+The app supports 1-to-1 video calls, screen sharing, mute/camera toggle, and a Google Meet–style layout — all implemented with pure WebRTC (no SFU).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+⭐ Features
+🎥 Video & Audio
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Real-time P2P video calling using WebRTC
 
-## Deploy on Vercel
+Auto full-screen when only one participant is present
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Dynamic split-screen when a remote peer joins
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+🖥 Screen Sharing
+
+Share screen with 1 click
+
+Remote participant video tiles shrink and move to the right (Google Meet style)
+
+Auto-restore camera when screen sharing stops
+
+🎤 Call Controls (Floating Bar)
+
+Mute / Unmute microphone
+
+Hide / Show camera
+
+Start / Stop screen sharing
+
+End call (closes stream + RTCPeerConnection)
+
+Controls always stick to bottom center (floating pill design)
+
+🔧 Signaling
+
+Built using Socket.IO
+
+Handles:
+
+join-room
+
+offer / answer (SDP)
+
+ICE candidate exchange
+
+user-left event
+
+📐 Responsive UI
+
+Tailwind CSS
+
+Video players auto-resize
+
+Full mobile support (full-screen mode)
+
+🏗️ Tech Stack
+Frontend
+
+Next.js 15
+
+React + Hooks
+
+Tailwind CSS
+
+lucide-react icons
+
+TypeScript
+
+WebRTC
+
+RTCPeerConnection
+
+STUN server
+
+MediaStreamTrack replaceTrack()
+
+getUserMedia / getDisplayMedia
+
+Backend
+
+Node.js
+
+Express
+
+Socket.IO signaling server
+
