@@ -2,33 +2,32 @@
 
 import { useEffect, useRef } from "react";
 
-type Props = {
+export default function VideoPlayer({
+  stream,
+  small = false,
+  muted = false,
+}: {
   stream: MediaStream | null;
-  small?: boolean; // when true, render small stacked video
+  small?: boolean;
   muted?: boolean;
-  autoPlay?: boolean;
-};
-
-export default function VideoPlayer({ stream, small = false, muted = false, autoPlay = true }: Props) {
+}) {
   const ref = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     if (ref.current) {
-      if (stream) {
-        ref.current.srcObject = stream;
-      } else {
-        ref.current.srcObject = null;
-      }
+      ref.current.srcObject = stream || null;
     }
   }, [stream]);
 
   return (
     <video
       ref={ref}
-      autoPlay={autoPlay}
+      autoPlay
       playsInline
       muted={muted}
-      className={`bg-black rounded-lg object-cover ${small ? "w-36 h-20" : "w-full h-full"}`}
+      className={`bg-black rounded-lg object-cover ${
+        small ? "w-36 h-24" : "w-full h-full"
+      }`}
     />
   );
 }

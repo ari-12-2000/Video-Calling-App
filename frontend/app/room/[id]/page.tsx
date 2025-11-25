@@ -6,49 +6,49 @@ import VideoPlayer from "@/components/VideoPlayer";
 import ControlsBar from "@/components/ControlsBar";
 import { useRouter } from "next/navigation";
 
-const socket = io(process.env.BASE_URL);
+const socket = io(process.env.BASE_URL, {
+  transports: ["websocket"],
+});
 
 export default function Room({ params }: { params: Promise<{ id: string }> }) {
   const { id: roomId } = use(params);
   const router = useRouter();
 
+  // Streams
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
-  const [sharingScreen, setSharingScreen] = useState(false);
 
-  // mute / video toggles
+  // Screen Sharing
+  const [isLocalSharing, setIsLocalSharing] = useState(false);
+  const [isRemoteSharing, setIsRemoteSharing] = useState(false);
+
+  // Toggles
   const [muted, setMuted] = useState(false);
   const [videoOff, setVideoOff] = useState(false);
 
   const peer = useRef<RTCPeerConnection | null>(null);
 
-  // Helper to stop all local tracks (used when ending call)
-  const stopLocalTracks = () => {
-    localStream?.getTracks().forEach((t) => t.stop());
-  };
-
   // ------------------ END CALL ------------------
   const endCall = () => {
-    // notify server
     socket.emit("leave-room", roomId);
 
-    // stop tracks and close peer
-    stopLocalTracks();
+    localStream?.getTracks().forEach((t) => t.stop());
     remoteStream?.getTracks().forEach((t) => t.stop());
+
     peer.current?.close();
     peer.current = null;
 
     router.push("/");
   };
 
-  // ------------------ MUTE / UNMUTE ------------------
+  // ------------------ MUTE ------------------
   const toggleMute = () => {
     if (!localStream) return;
     localStream.getAudioTracks().forEach((t) => (t.enabled = !t.enabled));
     setMuted((m) => !m);
   };
 
-  // ------------------ CAMERA ON/OFF ------------------
+  // ------------------ CAMERA ------------------
   const toggleVideo = () => {
     if (!localStream) return;
     localStream.getVideoTracks().forEach((t) => (t.enabled = !t.enabled));
@@ -58,31 +58,38 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
   // ------------------ SCREEN SHARE ------------------
   const startScreenShare = async () => {
     if (!peer.current) return;
-    try {
-      const screen = await navigator.mediaDevices.getDisplayMedia({ video: true });
-      const screenTrack = screen.getVideoTracks()[0];
 
-      // Replace current video sender track with screen track
-      const sender = peer.current.getSenders().find((s) => s.track?.kind === "video");
-      await sender?.replaceTrack(screenTrack);
+    const screen = await navigator.mediaDevices.getDisplayMedia({
+      video: true,
+    });
 
-      // when sharing stops, restore camera track
-      screenTrack.onended = async () => {
-        await stopScreenShare();
-      };
+    const screenTrack = screen.getVideoTracks()[0];
+    const sender = peer.current
+      .getSenders()
+      .find((s) => s.track?.kind === "video");
 
-      setSharingScreen(true);
-    } catch (err) {
-      console.error("Screen share failed:", err);
-    }
+    await sender?.replaceTrack(screenTrack);
+
+    setIsLocalSharing(true);
+    setIsRemoteSharing(false);
+
+    screenTrack.onended = () => {
+      stopScreenShare();
+    };
   };
 
   const stopScreenShare = async () => {
     if (!peer.current || !localStream) return;
+
     const cameraTrack = localStream.getVideoTracks()[0];
-    const sender = peer.current.getSenders().find((s) => s.track?.kind === "video");
+    const sender = peer.current
+      .getSenders()
+      .find((s) => s.track?.kind === "video");
+
     await sender?.replaceTrack(cameraTrack);
-    setSharingScreen(false);
+
+    setIsLocalSharing(false);
+    setIsRemoteSharing(false);
   };
 
   // ------------------ SETUP CALL ------------------
@@ -90,32 +97,46 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
     socket.emit("join-room", roomId);
 
     const start = async () => {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
+
       setLocalStream(stream);
 
-      // Create peer
       peer.current = new RTCPeerConnection({
         iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }],
       });
 
-      // add local tracks
-      stream.getTracks().forEach((track) => peer.current!.addTrack(track, stream));
+      stream.getTracks().forEach((track) => {
+        peer.current!.addTrack(track, stream);
+      });
 
-      // when remote track arrives
+      // Remote track
       peer.current.ontrack = (e) => {
-        setRemoteStream(e.streams[0]);
-      };
-
-      // send ice candidates to other peer via signaling
-      peer.current.onicecandidate = (e) => {
-        if (e.candidate) {
-          socket.emit("ice-candidate", { roomId, candidate: e.candidate });
+        const incoming = e.streams[0];
+        // Distinguish between camera and screen
+        if (incoming.getVideoTracks()[0].label.includes("screen")) {
+          setIsRemoteSharing(true);
+          setIsLocalSharing(false);
+        } else {
+          setRemoteStream(incoming);
         }
       };
 
-      // signaling handlers
+      // ICE
+      peer.current.onicecandidate = (e) => {
+        if (e.candidate) {
+          socket.emit("ice-candidate", {
+            roomId,
+            candidate: e.candidate,
+          });
+        }
+      };
+
+      // -------- SIGNALING FLOW --------
+
       socket.on("user-joined", async () => {
-        // existing user creates offer
         const offer = await peer.current!.createOffer();
         await peer.current!.setLocalDescription(offer);
         socket.emit("offer", { roomId, offer });
@@ -138,84 +159,82 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
 
       socket.on("user-left", () => {
         setRemoteStream(null);
+        setIsRemoteSharing(false);
       });
     };
 
     start();
-
-    // cleanup handlers on unmount
-    return () => {
-      socket.off("user-joined");
-      socket.off("offer");
-      socket.off("answer");
-      socket.off("ice-candidate");
-      socket.off("user-left");
-    };
   }, [roomId]);
 
-  // ------------------ UI layout logic ------------------
-  // If sharing screen, make the remote/other videos stacked on right (small)
-  // If only local (no remote), show fullscreen local
-  // We'll render accordingly in JSX
+  // ------------------ UI LAYOUT LOGIC ------------------
 
-  // Resume file path (uploaded file)
-  const resumePath = "/mnt/data/AritraKumarBaraResume.pdf";
+  const someoneIsSharing = isLocalSharing || isRemoteSharing;
+
+  const bigScreenStream =
+    isLocalSharing
+      ? localStream
+      : isRemoteSharing
+      ? remoteStream
+      : null;
 
   return (
     <div className="relative h-screen bg-gray-900 text-white">
-      {/* Main content area */}
+
+      {/* MAIN VIDEO AREA */}
       <div className="h-full w-full flex">
-        {/* When sharing, primary area is the shared screen or remote stream */}
-        <div className={`flex-1 flex items-center justify-center p-4 ${sharingScreen ? "bg-black" : ""}`}>
-          {/* Primary video/display area */}
-          {sharingScreen ? (
-            // If sharing screen, show the remote stream or local stream full width (depending on who's sharing)
-            <div className="w-full h-full flex items-center justify-center">
-              <VideoPlayer stream={remoteStream ?? localStream} />
+        <div className="flex-1 flex items-center justify-center p-4">
+
+          {/* Shared screen is always the big one */}
+          {someoneIsSharing && bigScreenStream ? (
+            <div className="w-full h-full">
+              <VideoPlayer stream={bigScreenStream} />
+            </div>
+          ) : remoteStream ? (
+            // Split screen (normal call)
+            <div className="grid grid-cols-2 gap-4 w-full h-full">
+              <VideoPlayer stream={localStream} />
+              <VideoPlayer stream={remoteStream} />
             </div>
           ) : (
-            // Not sharing: if remote exists show grid split, else show local fullscreen
-            remoteStream ? (
-              <div className="grid grid-cols-2 gap-4 w-full h-full p-6">
-                <VideoPlayer stream={localStream} />
-                <VideoPlayer stream={remoteStream} />
-              </div>
-            ) : (
-              <div className="w-full h-full p-6">
-                <VideoPlayer stream={localStream} />
-              </div>
-            )
+            // Your own fullscreen when alone
+            <div className="w-full h-full">
+              <VideoPlayer stream={localStream} />
+            </div>
           )}
         </div>
 
-        {/* Right side stacked small videos when sharing */}
-        {sharingScreen && (
+        {/* RIGHT SIDE THUMBNAILS WHEN SHARING */}
+        {someoneIsSharing && (
           <div className="w-56 p-4 flex flex-col gap-3 items-end">
-            {/* Local small video */}
-            <div className="w-full flex justify-end">
-              <VideoPlayer stream={localStream} small muted />
-            </div>
-            {/* Remote small video (if present) */}
+
+            <VideoPlayer
+              stream={localStream}
+              small
+              muted
+            />
+
             {remoteStream && (
-              <div className="w-full flex justify-end">
-                <VideoPlayer stream={remoteStream} small muted />
-              </div>
+              <VideoPlayer
+                stream={remoteStream}
+                small
+                muted
+              />
             )}
           </div>
         )}
       </div>
 
-      {/* Floating Controls (Option C) */}
+      {/* FLOATING CONTROLS */}
       <ControlsBar
         muted={muted}
         videoOff={videoOff}
-        sharingScreen={sharingScreen}
+        sharingScreen={isLocalSharing}
         onToggleMute={toggleMute}
         onToggleVideo={toggleVideo}
         onStartShare={startScreenShare}
         onStopShare={stopScreenShare}
         onEndCall={endCall}
-        resumeFilePath={resumePath}
+        resumeFilePath="/mnt/data/AritraKumarBaraResume.pdf"
       />
     </div>
   );
