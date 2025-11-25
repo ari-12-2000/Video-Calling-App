@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import VideoPlayer from "@/components/VideoPlayer";
 import ControlsBar from "@/components/ControlsBar";
 import { useRouter } from "next/navigation";
 
-const socket = io("http://localhost:5000");
+const socket = io(process.env.BASE_URL);
 
-export default function Room({ params }: any) {
-  const roomId = params.id;
+export default function Room({ params }: { params: Promise<{ id: string }> }) {
+  const { id: roomId } = use(params);
   const router = useRouter();
 
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
