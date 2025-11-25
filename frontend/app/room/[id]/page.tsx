@@ -8,6 +8,8 @@ import { useRouter } from "next/navigation";
 
 const socket = io(process.env.BASE_URL, {
   transports: ["websocket"],
+  autoConnect: true,
+  forceNew: true,
 });
 
 export default function Room({ params }: { params: Promise<{ id: string }> }) {
