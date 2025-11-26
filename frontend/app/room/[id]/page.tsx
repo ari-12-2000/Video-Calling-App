@@ -6,7 +6,7 @@ import VideoPlayer from "@/components/VideoPlayer";
 import ControlsBar from "@/components/ControlsBar";
 import { useRouter } from "next/navigation";
 
-const socket = io(process.env.BASE_URL, {
+const socket = io("https://video-calling-app-wbka.onrender.com", {
   transports: ["websocket"],
   autoConnect: true,
   forceNew: true,
