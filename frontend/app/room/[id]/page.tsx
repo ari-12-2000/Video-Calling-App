@@ -83,19 +83,19 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
   const stopScreenShare = async () => {
     if (!peer.current || !localStream) return;
 
-    // 🔥 stop ALL tracks from screen stream
-    const senders = peer.current.getSenders();
-    const screenSender = senders.find(s => s.track && s.track.label.includes("sharing"));
-    if (screenSender && screenSender.track) {
-      screenSender.track.stop();          // closes browser "stop sharing" prompt 🔥
-    }
-
-    const cameraTrack = localStream.getVideoTracks()[0];
-    await screenSender?.replaceTrack(cameraTrack);
+    // stop screen stream track
+    peer.current.getSenders().forEach(sender => {
+      if (sender.track && sender.track.label.includes("screen")) {
+        sender.track.stop();  // kills Chrome "Stop sharing" banner
+        const camTrack = localStream.getVideoTracks()[0];
+        sender.replaceTrack(camTrack); // 🔥 send camera back to remote peer
+      }
+    });
 
     setIsLocalSharing(false);
-    setIsRemoteSharing(false);
+    socket.emit("screen-stopped", roomId); // 🔥 notify remote peer
   };
+
 
 
   // ------------------ SETUP CALL ------------------
@@ -166,10 +166,17 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
       socket.on("user-left", () => {
         setRemoteStream(null);
         setIsRemoteSharing(false);
+        peer.current?.close();
+      });
+
+      socket.on("screen-stopped", () => {
+        setIsRemoteSharing(false);
       });
     };
 
     start();
+
+    return
   }, [roomId]);
 
   // ------------------ UI LAYOUT LOGIC ------------------
@@ -189,23 +196,31 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
       {/* MAIN VIDEO AREA */}
       <div className="h-full w-full flex flex-col md:flex-row">
 
-        {/* BIG VIDEO AREA */}
-        <div className="flex-1 flex items-center justify-center p-2 md:p-4">
-          {someoneIsSharing && bigScreenStream ? (
-            <div className="w-full h-full">
-              <VideoPlayer stream={bigScreenStream} />
-            </div>
+
+        {/* BIG VIDEO DISPLAY */}
+        <div className="relative flex-1 flex items-center justify-center bg-black">
+
+          {/* Priority:
+     1) remote screen share (big)
+     2) remote camera feed (big)
+     3) only you → your own video (big)
+  */}
+          {isRemoteSharing ? (
+            <VideoPlayer stream={remoteStream} />
           ) : remoteStream ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full h-full">
-              <VideoPlayer stream={localStream} />
-              <VideoPlayer stream={remoteStream} />
-            </div>
+            <VideoPlayer stream={remoteStream} />
           ) : (
-            <div className="w-full h-full">
-              <VideoPlayer stream={localStream} />
+            <VideoPlayer stream={localStream} />
+          )}
+
+          {/* SELF PREVIEW PIP — on mobile always small */}
+          {localStream && (
+            <div className="absolute bottom-3 right-3 w-28 h-40 md:hidden shadow-lg border border-white rounded-md overflow-hidden">
+              <VideoPlayer stream={localStream} muted />
             </div>
           )}
         </div>
+
 
         {/* THUMBNAILS — RIGHT ON DESKTOP, BELOW ON MOBILE */}
         {someoneIsSharing && (

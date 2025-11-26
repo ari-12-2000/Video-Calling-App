@@ -19,13 +19,12 @@ io.on("connection", (socket) => {
   socket.on("ice-candidate", ({ roomId, candidate }) => {
     socket.to(roomId).emit("ice-candidate", candidate);
   });
+  socket.on("leave-room", (roomId) => {
+    socket.to(roomId).emit("user-left"); // notify remote instantly
+  });
+
   socket.on("disconnect", () => {
-    const rooms = [...socket.rooms];
-    rooms.forEach((room) => {
-      if (room !== socket.id) {
-        socket.to(room).emit("user-left"); // 🔥 notify peers properly
-      }
-    });
+    socket.broadcast.emit("user-left");
   });
 });
 server.listen(5000, () => {
