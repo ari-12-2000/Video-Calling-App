@@ -83,16 +83,20 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
   const stopScreenShare = async () => {
     if (!peer.current || !localStream) return;
 
-    const cameraTrack = localStream.getVideoTracks()[0];
-    const sender = peer.current
-      .getSenders()
-      .find((s) => s.track?.kind === "video");
+    // 🔥 stop ALL tracks from screen stream
+    const senders = peer.current.getSenders();
+    const screenSender = senders.find(s => s.track && s.track.label.includes("screen"));
+    if (screenSender && screenSender.track) {
+      screenSender.track.stop();          // closes browser "stop sharing" prompt 🔥
+    }
 
-    await sender?.replaceTrack(cameraTrack);
+    const cameraTrack = localStream.getVideoTracks()[0];
+    await screenSender?.replaceTrack(cameraTrack);
 
     setIsLocalSharing(false);
     setIsRemoteSharing(false);
   };
+
 
   // ------------------ SETUP CALL ------------------
   useEffect(() => {
@@ -176,55 +180,43 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
     isLocalSharing
       ? localStream
       : isRemoteSharing
-      ? remoteStream
-      : null;
+        ? remoteStream
+        : null;
 
   return (
     <div className="relative h-screen bg-gray-900 text-white">
 
       {/* MAIN VIDEO AREA */}
-      <div className="h-full w-full flex">
-        <div className="flex-1 flex items-center justify-center p-4">
+      <div className="h-full w-full flex flex-col md:flex-row">
 
-          {/* Shared screen is always the big one */}
+        {/* BIG VIDEO AREA */}
+        <div className="flex-1 flex items-center justify-center p-2 md:p-4">
           {someoneIsSharing && bigScreenStream ? (
             <div className="w-full h-full">
               <VideoPlayer stream={bigScreenStream} />
             </div>
           ) : remoteStream ? (
-            // Split screen (normal call)
-            <div className="grid grid-cols-2 gap-4 w-full h-full">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full h-full">
               <VideoPlayer stream={localStream} />
               <VideoPlayer stream={remoteStream} />
             </div>
           ) : (
-            // Your own fullscreen when alone
             <div className="w-full h-full">
               <VideoPlayer stream={localStream} />
             </div>
           )}
         </div>
 
-        {/* RIGHT SIDE THUMBNAILS WHEN SHARING */}
+        {/* THUMBNAILS — RIGHT ON DESKTOP, BELOW ON MOBILE */}
         {someoneIsSharing && (
-          <div className="w-56 p-4 flex flex-col gap-3 items-end">
-
-            <VideoPlayer
-              stream={localStream}
-              small
-              muted
-            />
-
-            {remoteStream && (
-              <VideoPlayer
-                stream={remoteStream}
-                small
-                muted
-              />
-            )}
+          <div className="w-full md:w-56 p-3 flex md:flex-col flex-row gap-2 items-center justify-center md:items-end">
+            <VideoPlayer stream={localStream} small muted />
+            {remoteStream && <VideoPlayer stream={remoteStream} small muted />}
           </div>
         )}
+
       </div>
+
 
       {/* FLOATING CONTROLS */}
       <ControlsBar

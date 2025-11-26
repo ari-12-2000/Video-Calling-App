@@ -20,7 +20,12 @@ io.on("connection", (socket) => {
     socket.to(roomId).emit("ice-candidate", candidate);
   });
   socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
+    const rooms = [...socket.rooms];
+    rooms.forEach((room) => {
+      if (room !== socket.id) {
+        socket.to(room).emit("user-left"); // 🔥 notify peers properly
+      }
+    });
   });
 });
 server.listen(5000, () => {
