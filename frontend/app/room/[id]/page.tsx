@@ -85,7 +85,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
 
     // 🔥 stop ALL tracks from screen stream
     const senders = peer.current.getSenders();
-    const screenSender = senders.find(s => s.track && s.track.label.includes("screen"));
+    const screenSender = senders.find(s => s.track && s.track.label.includes("sharing"));
     if (screenSender && screenSender.track) {
       screenSender.track.stop();          // closes browser "stop sharing" prompt 🔥
     }
