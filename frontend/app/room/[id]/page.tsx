@@ -116,6 +116,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
       // Remote stream handler
       pc.ontrack = (e) => {
         const incoming = e.streams[0];
+        console.log("🌍 Incoming stream received",incoming.getVideoTracks()[0]?.label);
         if (incoming.getVideoTracks()[0]?.label.includes("screen")) {
           setIsRemoteSharing(true);
           setIsLocalSharing(false);
