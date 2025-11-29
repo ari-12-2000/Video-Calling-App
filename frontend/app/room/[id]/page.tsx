@@ -100,27 +100,23 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
   useEffect(() => {
     socket.emit("join-room", roomId);
 
-    const start = async () => {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      });
+    let pc: RTCPeerConnection;
 
-      setLocalStream(stream);
-
-      peer.current = new RTCPeerConnection({
+    const initPeer = () => {
+      pc = new RTCPeerConnection({
         iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }],
       });
+      peer.current = pc; // keep in ref
 
-      stream.getTracks().forEach((track) => {
-        peer.current!.addTrack(track, stream);
-      });
+      // Add local media tracks
+      localStream?.getTracks().forEach(track =>
+        pc.addTrack(track, localStream)
+      );
 
-      // Remote track
-      peer.current.ontrack = (e) => {
+      // Remote stream handler
+      pc.ontrack = (e) => {
         const incoming = e.streams[0];
-        // Distinguish between camera and screen
-        if (incoming.getVideoTracks()[0].label.includes("screen")) {
+        if (incoming.getVideoTracks()[0]?.label.includes("screen")) {
           setIsRemoteSharing(true);
           setIsLocalSharing(false);
         } else {
@@ -128,44 +124,63 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
         }
       };
 
-      // ICE
-      peer.current.onicecandidate = (e) => {
+      // ICE Candidate Discovery
+      pc.onicecandidate = (e) => {
         if (e.candidate) {
-          socket.emit("ice-candidate", {
-            roomId,
-            candidate: e.candidate,
-          });
+          socket.emit("ice-candidate", { roomId, candidate: e.candidate });
         }
       };
+    };
 
-      // -------- SIGNALING FLOW --------
+    const start = async () => {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
+
+      setLocalStream(stream);
+      initPeer();
+
+      // ---------- SIGNALING FLOW ----------
 
       socket.on("user-joined", async () => {
+        if (!peer.current || peer.current.signalingState === "closed") initPeer();
+
         const offer = await peer.current!.createOffer();
         await peer.current!.setLocalDescription(offer);
         socket.emit("offer", { roomId, offer });
-        console.log("new User joined");
+        console.log("📥 New user joined → Offer Sent");
       });
 
       socket.on("offer", async (offer) => {
+        if (!peer.current || peer.current.signalingState === "closed") initPeer();
+
         await peer.current!.setRemoteDescription(offer);
         const answer = await peer.current!.createAnswer();
         await peer.current!.setLocalDescription(answer);
         socket.emit("answer", { roomId, answer });
+        console.log("📤 Answer Sent");
       });
 
-      socket.on("answer", (answer) => {
-        peer.current!.setRemoteDescription(answer);
+      socket.on("answer", async (answer) => {
+        if (peer.current && peer.current.signalingState !== "closed") {
+          await peer.current.setRemoteDescription(answer);
+          console.log("✔ Answer Applied");
+        }
       });
 
       socket.on("ice-candidate", (candidate) => {
-        peer.current!.addIceCandidate(candidate);
+        if (peer.current && peer.current.signalingState !== "closed") {
+          peer.current.addIceCandidate(candidate);
+        }
       });
 
       socket.on("user-left", () => {
         setRemoteStream(null);
         setIsRemoteSharing(false);
         peer.current?.close();
+        peer.current = null;
+        console.log("❎ Peer Disconnected");
       });
 
       socket.on("screen-stopped", () => {
@@ -175,8 +190,21 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
 
     start();
 
-    return
-  }, [roomId]);
+    // 🔥 Cleanup — prevents multiple event bindings & state corruption
+    return () => {
+      socket.off("user-joined");
+      socket.off("offer");
+      socket.off("answer");
+      socket.off("ice-candidate");
+      socket.off("user-left");
+      socket.off("screen-stopped");
+
+      peer.current?.close();
+      peer.current = null;
+      console.log("🔻 Cleanup Done");
+    };
+  }, [roomId, localStream]);
+
 
   // ------------------ UI LAYOUT LOGIC ------------------
 
@@ -215,7 +243,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
           {/* SELF PREVIEW PIP — on mobile always small */}
           {(remoteStream || someoneIsSharing) && (
             <div className="absolute bottom-3 right-3 w-28 h-40 md:w-60 shadow-lg border border-white rounded-md overflow-hidden">
-              {localStream ? <VideoPlayer stream={localStream} muted />: <div className="w-full h-full bg-gray-800"/>}
+              {localStream ? <VideoPlayer stream={localStream} muted /> : <div className="w-full h-full bg-gray-800" />}
             </div>
           )}
         </div>
