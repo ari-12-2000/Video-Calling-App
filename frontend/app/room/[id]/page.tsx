@@ -118,6 +118,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
 
       // Remote track
       peer.current.ontrack = (e) => {
+        console.log("Received remote track:", e.streams[0].getVideoTracks()[0].label);
         const incoming = e.streams[0];
         // Distinguish between camera and screen
         if (incoming.getVideoTracks()[0].label.includes("screen")) {
@@ -144,6 +145,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
         const offer = await peer.current!.createOffer();
         await peer.current!.setLocalDescription(offer);
         socket.emit("offer", { roomId, offer });
+        console.log("new User joined");
       });
 
       socket.on("offer", async (offer) => {
@@ -181,12 +183,12 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
 
   const someoneIsSharing = isLocalSharing || isRemoteSharing;
 
-  const bigScreenStream =
-    isLocalSharing
-      ? localStream
-      : isRemoteSharing
-        ? remoteStream
-        : null;
+  // const bigScreenStream =
+  //   isLocalSharing
+  //     ? localStream
+  //     : isRemoteSharing
+  //       ? remoteStream
+  //       : null;
 
   return (
     <div className="relative h-screen bg-gray-900 text-white">
