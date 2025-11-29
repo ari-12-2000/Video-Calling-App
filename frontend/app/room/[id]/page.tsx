@@ -8,8 +8,6 @@ import { useRouter } from "next/navigation";
 
 const socket = io("https://video-calling-app-wbka.onrender.com", {
   transports: ["websocket"],
-  autoConnect: true,
-  forceNew: true,
 });
 
 export default function Room({ params }: { params: Promise<{ id: string }> }) {
@@ -214,21 +212,21 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
           )}
 
           {/* SELF PREVIEW PIP — on mobile always small */}
-          {localStream && (
-            <div className="absolute bottom-3 right-3 w-28 h-40 md:hidden shadow-lg border border-white rounded-md overflow-hidden">
-              <VideoPlayer stream={localStream} muted />
+          {(remoteStream || someoneIsSharing) && (
+            <div className="absolute bottom-3 right-3 w-28 h-40 md:w-60 shadow-lg border border-white rounded-md overflow-hidden">
+              {localStream ? <VideoPlayer stream={localStream} muted />: <div className="w-full h-full bg-gray-800"/>}
             </div>
           )}
         </div>
 
 
         {/* THUMBNAILS — RIGHT ON DESKTOP, BELOW ON MOBILE */}
-        {someoneIsSharing && (
+        {/* {someoneIsSharing && (
           <div className="w-full md:w-56 p-3 flex md:flex-col flex-row gap-2 items-center justify-center md:items-end">
             <VideoPlayer stream={localStream} small muted />
             {remoteStream && <VideoPlayer stream={remoteStream} small muted />}
           </div>
-        )}
+        )} */}
 
       </div>
 

@@ -22,6 +22,9 @@ io.on("connection", (socket) => {
   socket.on("leave-room", (roomId) => {
     socket.to(roomId).emit("user-left"); // notify remote instantly
   });
+  socket.on("screen-stopped", (roomId) => {
+    socket.to(roomId).emit("screen-stopped");
+  });
 
   socket.on("disconnect", () => {
     socket.broadcast.emit("user-left");
