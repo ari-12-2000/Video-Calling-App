@@ -153,7 +153,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
       });
 
       socket.on("offer", async (offer) => {
-        //if (!peer.current || peer.current.signalingState === "closed") initPeer();
+       if (!peer.current || peer.current.signalingState === "closed") initPeer();
 
         await peer.current!.setRemoteDescription(offer);
         const answer = await peer.current!.createAnswer();
