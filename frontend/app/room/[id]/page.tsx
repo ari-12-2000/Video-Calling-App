@@ -118,7 +118,6 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
 
       // Remote track
       peer.current.ontrack = (e) => {
-        console.log("Received remote track:", e.streams[0].getVideoTracks()[0].label);
         const incoming = e.streams[0];
         // Distinguish between camera and screen
         if (incoming.getVideoTracks()[0].label.includes("screen")) {
