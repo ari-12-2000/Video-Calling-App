@@ -15,7 +15,8 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
     const { id: roomId } = use(params);
     const router = useRouter();
     const offerSent = useRef(false);
-    const [remotePresent, setRemotePresent] = useState(false);
+    const [userCount, setUserCount] = useState(0);
+    const remotePresent = useRef<boolean>(false);
     const trackAdded = useRef(false);
     // Streams
     const [localStream, setLocalStream] = useState<MediaStream | null>(null);
@@ -147,7 +148,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
 
             socket.on("user-joined", async () => {
                 console.log("📥 New user joined", localStream);
-                setRemotePresent(true);
+                remotePresent.current = true;
                 if (!peer.current || peer.current.signalingState === "closed") initPeer();
                 if (!trackAdded.current) return
 
@@ -159,9 +160,8 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
             });
 
             socket.on("room-user-count", (count) => {
-               console.log(`👥 Room ${roomId} has ${count} participant(s)`);
-               if (count > 1)
-                setRemotePresent(true);
+                console.log(`👥 Room ${roomId} has ${count} participant(s)`);
+                setUserCount(count);
             });
 
 
@@ -194,7 +194,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
                 peer.current?.close();
                 peer.current = null;
                 console.log("❎ Peer Disconnected");
-                setRemotePresent(false);
+                setUserCount(prev => prev - 1)
             });
 
             socket.on("screen-stopped", () => {
@@ -233,16 +233,16 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
                 await peer.current!.setLocalDescription(offer);
                 socket.emit("offer", { roomId, offer });
                 offerSent.current = true;
-                console.log("📥 New user joined → Offer Sent", remotePresent);
+                console.log("📥 New user joined → Offer Sent", remotePresent.current);
             } catch (err) {
                 console.error("Failed to create/send offer", err);
             }
         };
-        console.log(localStream, "Checking to send offer:", remotePresent, offerSent.current);
-        if (remotePresent && !offerSent.current)
+        console.log(localStream, "Checking to send offer:", remotePresent.current, offerSent.current);
+        if (remotePresent.current && !offerSent.current)
             sendOffer();
 
-    }, [localStream,remotePresent]);
+    }, [localStream]);
 
 
 
@@ -277,16 +277,17 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
                         <VideoPlayer stream={remoteStream} />
                     ) : remoteStream ? (
                         <VideoPlayer stream={remoteStream} />
-                    ) : remotePresent ? (
-                        <VideoPlayer stream={remoteStream} />
+                    ) : userCount > 1 ? (
+                        <div className="w-full h-full grid items-center">
+                            <FallbackAvatar /></div>
                     ) : (
                         <VideoPlayer stream={localStream} />
                     )}
 
                     {/* SELF PREVIEW PIP — on mobile always small */}
-                    {(remoteStream || someoneIsSharing || remotePresent) && (
+                    {(remoteStream || someoneIsSharing || userCount > 1) && (
                         <div className="absolute bottom-3 right-3 w-28 h-40 md:w-60 shadow-lg border border-white rounded-md overflow-hidden">
-                            {localStream ? <VideoPlayer stream={localStream} muted /> : <div className="w-full h-full bg-gray-800 grid items-center">
+                            {localStream ? <VideoPlayer stream={localStream} muted /> : <div className="w-full h-full grid items-center">
                                 <FallbackAvatar /></div>}
                         </div>
                     )}
