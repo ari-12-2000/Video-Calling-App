@@ -26,14 +26,18 @@ io.on("connection", (socket) => {
     socket.to(roomId).emit("ice-candidate", candidate);
   });
   socket.on("leave-room", (roomId) => {
-    socket.to(roomId).emit("user-left"); // notify remote instantly
-  });
-  socket.on("screen-stopped", (roomId) => {
-    socket.to(roomId).emit("screen-stopped");
+    socket.leave(roomId); // ❗ remove socket from room
+
+    // Update count after removal
+    const count = io.sockets.adapter.rooms.get(roomId)?.size || 0;
+    io.to(roomId).emit("room-user-count", count);
+
+    socket.to(roomId).emit("user-left");
+    console.log(`User ${socket.id} left room ${roomId}. Users left: ${count}`);
   });
 
-  socket.on("disconnect", () => {
-    socket.broadcast.emit("user-left");
+  socket.on("screen-stopped", (roomId) => {
+    socket.to(roomId).emit("screen-stopped");
   });
 });
 server.listen(5000, () => {
