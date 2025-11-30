@@ -7,7 +7,13 @@ const io = new Server(server, { cors: { origin: "*" } });
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
   socket.on("join-room", (roomId) => {
+    console.log(`User joined room ${roomId}`);
     socket.join(roomId);
+    // get number of participants
+    const count = io.sockets.adapter.rooms.get(roomId)?.size || 0;
+
+    // send the active users count to both sides
+    io.to(roomId).emit("room-user-count", count);
     socket.to(roomId).emit("user-joined", socket.id);
   });
   socket.on("offer", ({ roomId, offer }) => {

@@ -5,6 +5,7 @@ import { io } from "socket.io-client";
 import VideoPlayer from "@/components/VideoPlayer";
 import ControlsBar from "@/components/ControlsBar";
 import { useRouter } from "next/navigation";
+import FallbackAvatar from "@/components/FallbackAvatar";
 
 const socket = io("https://video-calling-app-wbka.onrender.com", {
     transports: ["websocket"],
@@ -14,7 +15,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
     const { id: roomId } = use(params);
     const router = useRouter();
     const offerSent = useRef(false);
-    const remotePresent = useRef(false);
+    const [remotePresent, setRemotePresent] = useState(false);
     const trackAdded = useRef(false);
     // Streams
     const [localStream, setLocalStream] = useState<MediaStream | null>(null);
@@ -110,8 +111,8 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
             });
             peer.current = pc; // keep in ref
             if (localStream && !trackAdded.current) {
-               localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-               trackAdded.current=true;
+                localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+                trackAdded.current = true;
             }
             // Remote stream handler
             pc.ontrack = (e) => {
@@ -145,17 +146,24 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
             // ---------- SIGNALING FLOW ----------
 
             socket.on("user-joined", async () => {
-              console.log("📥 New user joined",localStream);
-              remotePresent.current=true;
+                console.log("📥 New user joined", localStream);
+                setRemotePresent(true);
                 if (!peer.current || peer.current.signalingState === "closed") initPeer();
-               if(!trackAdded.current) return
-              
+                if (!trackAdded.current) return
+
                 const offer = await peer.current!.createOffer();
                 await peer.current!.setLocalDescription(offer);
                 socket.emit("offer", { roomId, offer });
                 offerSent.current = true;
                 console.log("📥 New user joined → Offer Sent");
             });
+
+            socket.on("room-user-count", (count) => {
+               console.log(`👥 Room ${roomId} has ${count} participant(s)`);
+               if (count > 1)
+                setRemotePresent(true);
+            });
+
 
             socket.on("offer", async (offer) => {
                 if (!peer.current || peer.current.signalingState === "closed") initPeer();
@@ -214,24 +222,24 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
         if (!localStream || !peer.current) return;
 
         const pc = peer.current
-        if(!trackAdded.current){
-          localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-          trackAdded.current=true;
+        if (!trackAdded.current) {
+            localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+            trackAdded.current = true;
         }
-        const sendOffer = async () => { 
+        const sendOffer = async () => {
             try {
                 const offer = await peer.current!.createOffer();
                 await peer.current!.setLocalDescription(offer);
                 socket.emit("offer", { roomId, offer });
                 offerSent.current = true;
-                console.log("📥 New user joined → Offer Sent",remotePresent);
+                console.log("📥 New user joined → Offer Sent", remotePresent);
             } catch (err) {
                 console.error("Failed to create/send offer", err);
             }
         };
-        console.log(localStream,"Checking to send offer:", remotePresent.current, offerSent.current);
-        if (remotePresent.current && !offerSent.current)
-          sendOffer();
+        console.log(localStream, "Checking to send offer:", remotePresent, offerSent.current);
+        if (remotePresent && !offerSent.current)
+            sendOffer();
 
     }, [localStream]);
 
@@ -268,14 +276,17 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
                         <VideoPlayer stream={remoteStream} />
                     ) : remoteStream ? (
                         <VideoPlayer stream={remoteStream} />
+                    ) : remotePresent ? (
+                        <VideoPlayer stream={remoteStream} />
                     ) : (
                         <VideoPlayer stream={localStream} />
                     )}
 
                     {/* SELF PREVIEW PIP — on mobile always small */}
-                    {(remoteStream || someoneIsSharing) && (
+                    {(remoteStream || someoneIsSharing || remotePresent) && (
                         <div className="absolute bottom-3 right-3 w-28 h-40 md:w-60 shadow-lg border border-white rounded-md overflow-hidden">
-                            {localStream ? <VideoPlayer stream={localStream} muted /> : <div className="w-full h-full bg-gray-800" />}
+                            {localStream ? <VideoPlayer stream={localStream} muted /> : <div className="w-full h-full bg-gray-800 grid items-center">
+                                <FallbackAvatar /></div>}
                         </div>
                     )}
                 </div>
