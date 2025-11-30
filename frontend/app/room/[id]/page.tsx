@@ -148,7 +148,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
               console.log("📥 New user joined",localStream);
               remotePresent.current=true;
                 if (!peer.current || peer.current.signalingState === "closed") initPeer();
-               if(!localStream) return
+               if(!trackAdded.current) return
               
                 const offer = await peer.current!.createOffer();
                 await peer.current!.setLocalDescription(offer);
