@@ -16,7 +16,7 @@ export default function FallbackAvatar() {
         className="
           bg-gray-300 mt-[3%]
           w-[55%] h-[33%]
-          rounded-t-full rounded-b-[28%]
+          rounded-t-full rounded-b-[38%]
           max-w-[240px] max-h-[160px]   /* body size also capped */
         "
       />

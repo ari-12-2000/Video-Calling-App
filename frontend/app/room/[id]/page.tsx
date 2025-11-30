@@ -16,17 +16,15 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
     const router = useRouter();
     const offerSent = useRef(false);
     const [userCount, setUserCount] = useState(0);
-    const remotePresent = useRef<boolean>(false);
+    const remotePresent = useRef(false);
     const trackAdded = useRef(false);
-    // Streams
+
     const [localStream, setLocalStream] = useState<MediaStream | null>(null);
     const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
 
-    // Screen Sharing
     const [isLocalSharing, setIsLocalSharing] = useState(false);
     const [isRemoteSharing, setIsRemoteSharing] = useState(false);
 
-    // Toggles
     const [muted, setMuted] = useState(false);
     const [videoOff, setVideoOff] = useState(false);
 
@@ -97,43 +95,40 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
         setIsLocalSharing(false);
         socket.emit("screen-stopped", roomId); // 🔥 notify remote peer
     };
+    /* --------------------------------------------------------
+       🔥  initPeer extracted outside useEffect (your request)
+       -------------------------------------------------------- */
+    const initPeer = () => {
+        const pc = new RTCPeerConnection({
+            iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }],
+        });
+
+        peer.current = pc;
+
+        if (localStream && !trackAdded.current) {
+            localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+            trackAdded.current = true;
+        }
+
+        pc.ontrack = (e) => {
+            const incoming = e.streams[0];
+            if (incoming.getVideoTracks()[0]?.label.includes("screen")) {
+                setIsRemoteSharing(true);
+                setIsLocalSharing(false);
+            } else {
+                setRemoteStream(incoming);
+            }
+        };
+
+        pc.onicecandidate = (e) => {
+            if (e.candidate) socket.emit("ice-candidate", { roomId, candidate: e.candidate });
+        };
+    };
 
 
-
-    // ------------------ SETUP CALL ------------------
+    /* ------------------ SETUP CALL ------------------ */
     useEffect(() => {
         socket.emit("join-room", roomId);
-
-        let pc: RTCPeerConnection;
-
-        const initPeer = () => {
-            pc = new RTCPeerConnection({
-                iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }],
-            });
-            peer.current = pc; // keep in ref
-            if (localStream && !trackAdded.current) {
-                localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-                trackAdded.current = true;
-            }
-            // Remote stream handler
-            pc.ontrack = (e) => {
-                const incoming = e.streams[0];
-                console.log("🌍 Incoming stream received", incoming.getVideoTracks()[0]?.label);
-                if (incoming.getVideoTracks()[0]?.label.includes("screen")) {
-                    setIsRemoteSharing(true);
-                    setIsLocalSharing(false);
-                } else {
-                    setRemoteStream(incoming);
-                }
-            };
-
-            // ICE Candidate Discovery
-            pc.onicecandidate = (e) => {
-                if (e.candidate) {
-                    socket.emit("ice-candidate", { roomId, candidate: e.candidate });
-                }
-            };
-        };
 
         const start = async () => {
             const stream = await navigator.mediaDevices.getUserMedia({
@@ -144,7 +139,6 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
             setLocalStream(stream);
             initPeer();
 
-            // ---------- SIGNALING FLOW ----------
 
             socket.on("user-joined", async () => {
                 console.log("📥 New user joined", localStream);
@@ -152,39 +146,30 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
                 if (!peer.current || peer.current.signalingState === "closed") initPeer();
                 if (!trackAdded.current) return
                 offerSent.current = true;
+
                 const offer = await peer.current!.createOffer();
                 await peer.current!.setLocalDescription(offer);
                 socket.emit("offer", { roomId, offer });
-                console.log("📥 New user joined → Offer Sent");
             });
 
-            socket.on("room-user-count", (count) => {
-                console.log(`👥 Room ${roomId} has ${count} participant(s)`);
-                setUserCount(count);
-            });
+            socket.on("room-user-count", count => setUserCount(count));
 
-
-            socket.on("offer", async (offer) => {
+            socket.on("offer", async offer => {
                 if (!peer.current || peer.current.signalingState === "closed") initPeer();
-
                 await peer.current!.setRemoteDescription(offer);
                 const answer = await peer.current!.createAnswer();
                 await peer.current!.setLocalDescription(answer);
                 socket.emit("answer", { roomId, answer });
-                console.log("📤 Answer Sent");
             });
 
-            socket.on("answer", async (answer) => {
-                if (peer.current && peer.current.signalingState !== "closed") {
+            socket.on("answer", async answer => {
+                if (peer.current && peer.current.signalingState !== "closed")
                     await peer.current.setRemoteDescription(answer);
-                    console.log("✔ Answer Applied");
-                }
             });
 
             socket.on("ice-candidate", (candidate) => {
-                if (peer.current && peer.current.signalingState !== "closed") {
+                if (peer.current && peer.current.signalingState !== "closed")
                     peer.current.addIceCandidate(candidate);
-                }
             });
 
             socket.on("user-left", () => {
@@ -192,18 +177,14 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
                 setIsRemoteSharing(false);
                 peer.current?.close();
                 peer.current = null;
-                console.log("❎ Peer Disconnected");
-                setUserCount(prev => prev - 1)
+                setUserCount(prev => prev - 1);
             });
 
-            socket.on("screen-stopped", () => {
-                setIsRemoteSharing(false);
-            });
+            socket.on("screen-stopped", () => setIsRemoteSharing(false));
         };
 
         start();
 
-        // 🔥 Cleanup — prevents multiple event bindings & state corruption
         return () => {
             socket.off("user-joined");
             socket.off("offer");
@@ -211,23 +192,20 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
             socket.off("ice-candidate");
             socket.off("user-left");
             socket.off("screen-stopped");
-
             peer.current?.close();
             peer.current = null;
-            console.log("🔻 Cleanup Done");
         };
     }, [roomId]);
 
+
     useEffect(() => {
         if (!localStream || !peer.current) return;
-
-        const pc = peer.current
         if (!trackAdded.current) {
-            localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+            localStream.getTracks().forEach(track => peer.current!.addTrack(track, localStream));
             trackAdded.current = true;
         }
-
     }, [localStream]);
+
 
     useEffect(() => {
         if (!localStream) return;
@@ -235,34 +213,29 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
         const audioTrack = localStream.getAudioTracks()[0];
 
         if (userCount <= 1) {
-            audioTrack.enabled = false;    // 🔇 avoids hearing yourself
-            console.log("Mic muted for self — solo mode");
+            audioTrack.enabled = false;
             setRemoteStream(null);
             setIsRemoteSharing(false);
             peer.current?.close();
             peer.current = null;
-            console.log("❎ Peer Disconnected");
         } else {
-            audioTrack.enabled = true;     // 🔊 normal call mode
+            audioTrack.enabled = true;
         }
 
-        console.log(localStream, "Checking to send offer:", remotePresent.current, offerSent.current, userCount);
         if ((remotePresent.current || userCount > 1) && !offerSent.current)
             sendOffer();
 
     }, [userCount, localStream]);
 
+
     const sendOffer = async () => {
-        try {
-            const offer = await peer.current!.createOffer();
-            await peer.current!.setLocalDescription(offer);
-            socket.emit("offer", { roomId, offer });
-            offerSent.current = true;
-            console.log("📥 New user joined → Offer Sent", remotePresent.current);
-        } catch (err) {
-            console.error("Failed to create/send offer", err);
-        }
+        const offer = await peer.current!.createOffer();
+        await peer.current!.setLocalDescription(offer);
+        socket.emit("offer", { roomId, offer });
+        offerSent.current = true;
     };
+
+
     // ------------------ UI LAYOUT LOGIC ------------------
 
     const someoneIsSharing = isLocalSharing || isRemoteSharing;
