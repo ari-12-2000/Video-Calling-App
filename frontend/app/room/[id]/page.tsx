@@ -227,20 +227,6 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
             localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
             trackAdded.current = true;
         }
-        const sendOffer = async () => {
-            try {
-                const offer = await peer.current!.createOffer();
-                await peer.current!.setLocalDescription(offer);
-                socket.emit("offer", { roomId, offer });
-                offerSent.current = true;
-                console.log("📥 New user joined → Offer Sent", remotePresent.current);
-            } catch (err) {
-                console.error("Failed to create/send offer", err);
-            }
-        };
-        console.log(localStream, "Checking to send offer:", remotePresent.current, offerSent.current);
-        if (remotePresent.current && !offerSent.current)
-            sendOffer();
 
     }, [localStream]);
 
@@ -252,12 +238,32 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
         if (userCount <= 1) {
             audioTrack.enabled = false;    // 🔇 avoids hearing yourself
             console.log("Mic muted for self — solo mode");
+            setRemoteStream(null);
+            setIsRemoteSharing(false);
+            peer.current?.close();
+            peer.current = null;
+            console.log("❎ Peer Disconnected");
         } else {
             audioTrack.enabled = true;     // 🔊 normal call mode
         }
+
+        console.log(localStream, "Checking to send offer:", remotePresent.current, offerSent.current);
+        if ((remotePresent.current || userCount > 1) && !offerSent.current)
+            sendOffer();
+
     }, [userCount, localStream]);
 
-
+    const sendOffer = async () => {
+        try {
+            const offer = await peer.current!.createOffer();
+            await peer.current!.setLocalDescription(offer);
+            socket.emit("offer", { roomId, offer });
+            offerSent.current = true;
+            console.log("📥 New user joined → Offer Sent", remotePresent.current);
+        } catch (err) {
+            console.error("Failed to create/send offer", err);
+        }
+    };
     // ------------------ UI LAYOUT LOGIC ------------------
 
     const someoneIsSharing = isLocalSharing || isRemoteSharing;
@@ -285,9 +291,9 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
      3) only you → your own video (big)
   */}
                     {isRemoteSharing ? (
-                        <VideoPlayer stream={remoteStream} videoOff={videoOff} />
+                        <VideoPlayer stream={remoteStream} />
                     ) : userCount > 1 ? (
-                        <VideoPlayer stream={remoteStream} videoOff={videoOff} />
+                        <VideoPlayer stream={remoteStream} />
                     ) : (
                         <VideoPlayer stream={localStream} videoOff={videoOff} />
                     )}
@@ -295,7 +301,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
                     {/* SELF PREVIEW PIP — on mobile always small */}
                     {(someoneIsSharing || userCount > 1) && (
                         <div className="absolute bottom-3 right-3 w-28 h-40 md:w-60 shadow-lg border border-white rounded-md overflow-hidden">
-                            <VideoPlayer stream={localStream} muted videoOff={videoOff} /> 
+                            <VideoPlayer stream={localStream} muted videoOff={videoOff} />
                         </div>
                     )}
                 </div>

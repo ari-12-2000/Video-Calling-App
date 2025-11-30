@@ -1,11 +1,24 @@
 export default function FallbackAvatar() {
   return (
-    <div className="flex flex-col items-center justify-center select-none">
-      {/* Head */}
-      <div className="w-24 h-24 rounded-full bg-gray-300" />
+    <div className="w-full h-full flex flex-col items-center justify-center select-none">
 
-      {/* Body (flat bottom) */}
-      <div className="w-36 h-24 bg-gray-300 rounded-b-lg rounded-t-full mt-2" />
+      {/* Head */}
+      <div
+        className="
+        bg-gray-300 rounded-full
+        w-[35%] aspect-square
+        "
+      />
+
+      {/* Body — slightly rounded bottom */}
+      <div
+        className="
+        bg-gray-300 mt-[3%]
+        w-[55%] h-[33%]
+        rounded-t-full 
+        rounded-b-[25%]   /* ⬅ smoother bottom curve */
+        "
+      />
     </div>
   );
 }
