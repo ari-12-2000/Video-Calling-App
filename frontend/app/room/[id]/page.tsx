@@ -13,7 +13,8 @@ const socket = io("https://video-calling-app-wbka.onrender.com", {
 export default function Room({ params }: { params: Promise<{ id: string }> }) {
     const { id: roomId } = use(params);
     const router = useRouter();
-
+    const offerSent = useRef(false);
+    const remotePresent = useRef(false);
     // Streams
     const [localStream, setLocalStream] = useState<MediaStream | null>(null);
     const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
@@ -107,7 +108,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
                 iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }],
             });
             peer.current = pc; // keep in ref
-
+            localStream?.getTracks().forEach(track => pc.addTrack(track, localStream));
             // Remote stream handler
             pc.ontrack = (e) => {
                 const incoming = e.streams[0];
@@ -140,11 +141,15 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
             // ---------- SIGNALING FLOW ----------
 
             socket.on("user-joined", async () => {
+              console.log("📥 New user joined");
+              remotePresent.current=true;
                 if (!peer.current || peer.current.signalingState === "closed") initPeer();
-
+               if(!localStream) return
+              
                 const offer = await peer.current!.createOffer();
                 await peer.current!.setLocalDescription(offer);
                 socket.emit("offer", { roomId, offer });
+                offerSent.current = true;
                 console.log("📥 New user joined → Offer Sent");
             });
 
@@ -207,14 +212,20 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
         const pc = peer.current
         localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
 
-        // renegotiate if connection already exists
-        if (peer.current.signalingState === "stable") {
-            peer.current.createOffer().then(offer => {
-                peer.current!.setLocalDescription(offer);
+        const sendOfferIfNeeded = async () => {
+            if (offerSent.current || !remotePresent) return; // prevent multiple offers
+            try {
+                const offer = await peer.current!.createOffer();
+                await peer.current!.setLocalDescription(offer);
                 socket.emit("offer", { roomId, offer });
-            });
-            console.log("🔄 User enabled permissions later → renegotiated");
-        }
+                offerSent.current = true;
+                console.log("📥 New user joined → Offer Sent");
+            } catch (err) {
+                console.error("Failed to create/send offer", err);
+            }
+        };
+
+        sendOfferIfNeeded();
 
     }, [localStream]);
 
