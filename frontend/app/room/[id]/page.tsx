@@ -158,11 +158,14 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
                 const answer = await peer.current!.createAnswer();
                 await peer.current!.setLocalDescription(answer);
                 socket.emit("answer", { roomId, answer });
+                console.log("📡 Offer Recieved and Answer Sent");
             });
 
             socket.on("answer", async answer => {
+                
                 if (peer.current && peer.current.signalingState !== "closed")
                     await peer.current.setRemoteDescription(answer);
+                console.log("📡 Answer Recieved");
             });
 
             socket.on("ice-candidate", (candidate) => {
