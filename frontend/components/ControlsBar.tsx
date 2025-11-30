@@ -8,6 +8,7 @@ import {
   Monitor,
   X,
   FileText,
+  MonitorOff,
 } from "lucide-react";
 
 export default function ControlsBar({
@@ -61,7 +62,7 @@ export default function ControlsBar({
             onClick={onStopShare}
             className="p-3 bg-white border rounded-full hover:bg-gray-100 transition"
           >
-            <Monitor className="text-blue-600 w-5 h-5" />
+            <MonitorOff className="text-blue-600 w-5 h-5" />
           </button>
         )}
 

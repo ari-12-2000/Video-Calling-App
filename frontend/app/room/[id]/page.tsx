@@ -244,7 +244,18 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
 
     }, [localStream]);
 
+    useEffect(() => {
+        if (!localStream) return;
 
+        const audioTrack = localStream.getAudioTracks()[0];
+
+        if (userCount <= 1) {
+            audioTrack.enabled = false;    // 🔇 avoids hearing yourself
+            console.log("Mic muted for self — solo mode");
+        } else {
+            audioTrack.enabled = true;     // 🔊 normal call mode
+        }
+    }, [userCount, localStream]);
 
 
     // ------------------ UI LAYOUT LOGIC ------------------
@@ -274,21 +285,17 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
      3) only you → your own video (big)
   */}
                     {isRemoteSharing ? (
-                        <VideoPlayer stream={remoteStream} />
-                    ) : remoteStream ? (
-                        <VideoPlayer stream={remoteStream} />
+                        <VideoPlayer stream={remoteStream} videoOff={videoOff} />
                     ) : userCount > 1 ? (
-                        <div className="w-full h-full grid items-center">
-                            <FallbackAvatar /></div>
+                        <VideoPlayer stream={remoteStream} videoOff={videoOff} />
                     ) : (
-                        <VideoPlayer stream={localStream} />
+                        <VideoPlayer stream={localStream} videoOff={videoOff} />
                     )}
 
                     {/* SELF PREVIEW PIP — on mobile always small */}
-                    {(remoteStream || someoneIsSharing || userCount > 1) && (
+                    {(someoneIsSharing || userCount > 1) && (
                         <div className="absolute bottom-3 right-3 w-28 h-40 md:w-60 shadow-lg border border-white rounded-md overflow-hidden">
-                            {localStream ? <VideoPlayer stream={localStream} muted /> : <div className="w-full h-full grid items-center">
-                                <FallbackAvatar /></div>}
+                            <VideoPlayer stream={localStream} muted videoOff={videoOff} /> 
                         </div>
                     )}
                 </div>
