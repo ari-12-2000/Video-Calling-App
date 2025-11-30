@@ -212,20 +212,19 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
         const pc = peer.current
         localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
 
-        const sendOfferIfNeeded = async () => {
-            if (offerSent.current || !remotePresent) return; // prevent multiple offers
+        const sendOffer = async () => { 
             try {
                 const offer = await peer.current!.createOffer();
                 await peer.current!.setLocalDescription(offer);
                 socket.emit("offer", { roomId, offer });
                 offerSent.current = true;
-                console.log("📥 New user joined → Offer Sent");
+                console.log("📥 New user joined → Offer Sent",remotePresent);
             } catch (err) {
                 console.error("Failed to create/send offer", err);
             }
         };
-
-        sendOfferIfNeeded();
+        if (remotePresent.current && !offerSent.current)
+        sendOffer();
 
     }, [localStream]);
 
