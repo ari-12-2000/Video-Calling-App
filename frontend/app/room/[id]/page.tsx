@@ -151,11 +151,10 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
                 remotePresent.current = true;
                 if (!peer.current || peer.current.signalingState === "closed") initPeer();
                 if (!trackAdded.current) return
-
+                offerSent.current = true;
                 const offer = await peer.current!.createOffer();
                 await peer.current!.setLocalDescription(offer);
                 socket.emit("offer", { roomId, offer });
-                offerSent.current = true;
                 console.log("📥 New user joined → Offer Sent");
             });
 
@@ -247,7 +246,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
             audioTrack.enabled = true;     // 🔊 normal call mode
         }
 
-        console.log(localStream, "Checking to send offer:", remotePresent.current, offerSent.current);
+        console.log(localStream, "Checking to send offer:", remotePresent.current, offerSent.current, userCount);
         if ((remotePresent.current || userCount > 1) && !offerSent.current)
             sendOffer();
 
