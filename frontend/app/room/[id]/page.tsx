@@ -145,9 +145,11 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
                 remotePresent.current = true;
                 if (!peer.current || peer.current.signalingState === "closed") initPeer();
                 if (!trackAdded.current) return
-                offerSent.current = true;
+                if ((remotePresent.current || userCount > 1) && !offerSent.current) {
+                    offerSent.current = true;
+                    sendOffer();
+                }
 
-                sendOffer();
             });
 
             socket.on("room-user-count", count => { setUserCount(count); console.log("👥 Room user count:", count); });
