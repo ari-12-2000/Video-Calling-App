@@ -191,19 +191,19 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
 
         start();
 
-        // 🔥 Cleanup — prevents multiple event bindings & state corruption
-        return () => {
-            socket.off("user-joined");
-            socket.off("offer");
-            socket.off("answer");
-            socket.off("ice-candidate");
-            socket.off("user-left");
-            socket.off("screen-stopped");
+        // // 🔥 Cleanup — prevents multiple event bindings & state corruption
+        // return () => {
+        //     socket.off("user-joined");
+        //     socket.off("offer");
+        //     socket.off("answer");
+        //     socket.off("ice-candidate");
+        //     socket.off("user-left");
+        //     socket.off("screen-stopped");
 
-            peer.current?.close();
-            peer.current = null;
-            console.log("🔻 Cleanup Done");
-        };
+        //     peer.current?.close();
+        //     peer.current = null;
+        //     console.log("🔻 Cleanup Done");
+        // };
     }, [roomId]);
 
     useEffect(() => {
