@@ -109,7 +109,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
                 iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }],
             });
             peer.current = pc; // keep in ref
-            if (localStream){
+            if (localStream && !trackAdded.current) {
                localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
                trackAdded.current=true;
             }
@@ -214,9 +214,10 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
         if (!localStream || !peer.current) return;
 
         const pc = peer.current
-        if(!trackAdded.current)
+        if(!trackAdded.current){
           localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-
+          trackAdded.current=true;
+        }
         const sendOffer = async () => { 
             try {
                 const offer = await peer.current!.createOffer();
@@ -230,7 +231,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
         };
         console.log(localStream,"Checking to send offer:", remotePresent.current, offerSent.current);
         if (remotePresent.current && !offerSent.current)
-        sendOffer();
+          sendOffer();
 
     }, [localStream]);
 
