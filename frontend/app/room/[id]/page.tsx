@@ -242,7 +242,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
         if (remotePresent && !offerSent.current)
             sendOffer();
 
-    }, [localStream]);
+    }, [localStream,remotePresent]);
 
 
 
