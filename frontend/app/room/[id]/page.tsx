@@ -194,6 +194,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
                 peer.current?.close();
                 peer.current = null;
                 console.log("❎ Peer Disconnected");
+                setRemotePresent(false);
             });
 
             socket.on("screen-stopped", () => {
