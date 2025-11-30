@@ -141,7 +141,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
             // ---------- SIGNALING FLOW ----------
 
             socket.on("user-joined", async () => {
-              console.log("📥 New user joined");
+              console.log("📥 New user joined",localStream);
               remotePresent.current=true;
                 if (!peer.current || peer.current.signalingState === "closed") initPeer();
                if(!localStream) return
