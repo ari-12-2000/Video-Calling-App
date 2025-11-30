@@ -150,9 +150,10 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
                 sendOffer();
             });
 
-            socket.on("room-user-count", count => setUserCount(count));
+            socket.on("room-user-count", count => { setUserCount(count); console.log("👥 Room user count:", count); });
 
             socket.on("offer", async offer => {
+                console.log("📡 Offer Recieved");
                 if (!peer.current || peer.current.signalingState === "closed") initPeer();
                 await peer.current!.setRemoteDescription(offer);
                 const answer = await peer.current!.createAnswer();
@@ -162,7 +163,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
             });
 
             socket.on("answer", async answer => {
-                
+
                 if (peer.current && peer.current.signalingState !== "closed")
                     await peer.current.setRemoteDescription(answer);
                 console.log("📡 Answer Recieved");
@@ -220,7 +221,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
             audioTrack.enabled = true;
         }
 
-        if ((remotePresent.current || userCount > 1) && !offerSent.current){
+        if ((remotePresent.current || userCount > 1) && !offerSent.current) {
             offerSent.current = true;
             sendOffer();
         }
