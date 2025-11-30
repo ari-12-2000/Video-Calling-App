@@ -15,6 +15,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
     const router = useRouter();
     const offerSent = useRef(false);
     const remotePresent = useRef(false);
+    const trackAdded = useRef(false);
     // Streams
     const [localStream, setLocalStream] = useState<MediaStream | null>(null);
     const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
@@ -108,7 +109,10 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
                 iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }],
             });
             peer.current = pc; // keep in ref
-            localStream?.getTracks().forEach(track => pc.addTrack(track, localStream));
+            if (localStream){
+               localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+               trackAdded.current=true;
+            }
             // Remote stream handler
             pc.ontrack = (e) => {
                 const incoming = e.streams[0];
@@ -191,26 +195,27 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
 
         start();
 
-        // // 🔥 Cleanup — prevents multiple event bindings & state corruption
-        // return () => {
-        //     socket.off("user-joined");
-        //     socket.off("offer");
-        //     socket.off("answer");
-        //     socket.off("ice-candidate");
-        //     socket.off("user-left");
-        //     socket.off("screen-stopped");
+        // 🔥 Cleanup — prevents multiple event bindings & state corruption
+        return () => {
+            socket.off("user-joined");
+            socket.off("offer");
+            socket.off("answer");
+            socket.off("ice-candidate");
+            socket.off("user-left");
+            socket.off("screen-stopped");
 
-        //     peer.current?.close();
-        //     peer.current = null;
-        //     console.log("🔻 Cleanup Done");
-        // };
+            peer.current?.close();
+            peer.current = null;
+            console.log("🔻 Cleanup Done");
+        };
     }, [roomId]);
 
     useEffect(() => {
         if (!localStream || !peer.current) return;
 
         const pc = peer.current
-        localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+        if(!trackAdded.current)
+          localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
 
         const sendOffer = async () => { 
             try {
