@@ -173,6 +173,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
             });
 
             socket.on("user-left", () => {
+                console.log("📤 User left the room");
                 setRemoteStream(null);
                 setIsRemoteSharing(false);
                 peer.current?.close();
