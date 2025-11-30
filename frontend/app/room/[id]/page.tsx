@@ -147,9 +147,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
                 if (!trackAdded.current) return
                 offerSent.current = true;
 
-                const offer = await peer.current!.createOffer();
-                await peer.current!.setLocalDescription(offer);
-                socket.emit("offer", { roomId, offer });
+                sendOffer();
             });
 
             socket.on("room-user-count", count => setUserCount(count));
@@ -215,10 +213,6 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
 
         if (userCount <= 1) {
             audioTrack.enabled = false;
-            setRemoteStream(null);
-            setIsRemoteSharing(false);
-            peer.current?.close();
-            peer.current = null;
         } else {
             audioTrack.enabled = true;
         }
