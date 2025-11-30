@@ -223,7 +223,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
                 console.error("Failed to create/send offer", err);
             }
         };
-        console.log("Checking to send offer:", remotePresent.current, offerSent.current);
+        console.log(localStream,"Checking to send offer:", remotePresent.current, offerSent.current);
         if (remotePresent.current && !offerSent.current)
         sendOffer();
 
