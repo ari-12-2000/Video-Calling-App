@@ -229,10 +229,22 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
 
 
     const sendOffer = async () => {
-        const offer = await peer.current!.createOffer();
-        await peer.current!.setLocalDescription(offer);
-        socket.emit("offer", { roomId, offer });
-        offerSent.current = true;
+        if (!peer.current || peer.current.signalingState === "closed") {
+            console.log("⚙ Re-initializing peer before sending offer");
+            initPeer();         // <-- recreate RTCPeerConnection
+        }
+
+        try {
+            const offer = await peer.current!.createOffer();
+            await peer.current!.setLocalDescription(offer);
+
+            socket.emit("offer", { roomId, offer });
+            offerSent.current = true;
+
+            console.log("📡 Offer Sent!");
+        } catch (err) {
+            console.error("Offer failed →", err);
+        }
     };
 
 
