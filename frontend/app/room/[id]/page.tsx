@@ -217,8 +217,10 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
             audioTrack.enabled = true;
         }
 
-        if ((remotePresent.current || userCount > 1) && !offerSent.current)
+        if ((remotePresent.current || userCount > 1) && !offerSent.current){
+            offerSent.current = true;
             sendOffer();
+        }
 
     }, [userCount, localStream]);
 
