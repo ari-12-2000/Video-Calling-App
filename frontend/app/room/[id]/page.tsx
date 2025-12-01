@@ -112,6 +112,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
         if (localStream && !trackAdded.current) {
             localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
             trackAdded.current = true;
+            console.log("🔥 Added local tracks to new peer connection");
         }
 
         pc.ontrack = (e) => {
@@ -122,10 +123,12 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
             } else {
                 setRemoteStream(incoming);
             }
+            console.log("🔵 Received remote track");
         };
 
         pc.onicecandidate = (e) => {
             if (e.candidate) socket.emit("ice-candidate", { roomId, candidate: e.candidate });
+            console.log("🔵 ICE candidate generated and sent");
         };
     };
 
