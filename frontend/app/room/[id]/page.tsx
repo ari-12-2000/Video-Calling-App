@@ -14,19 +14,22 @@ const socket = io("https://video-calling-app-wbka.onrender.com", {
 export default function Room({ params }: { params: Promise<{ id: string }> }) {
     const { id: roomId } = use(params);
     const router = useRouter();
+
+    // ----------------- NEW FLAGS 🔥 -----------------
+    const selfReady = useRef(false);        // I have camera
+    const remoteReady = useRef(false);      // They have camera
     const offerSent = useRef(false);
+
     const [userCount, setUserCount] = useState(0);
-    const remotePresent = useRef(false);
     const trackAdded = useRef(false);
 
     const [localStream, setLocalStream] = useState<MediaStream | null>(null);
     const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
 
-    const [isLocalSharing, setIsLocalSharing] = useState(false);
-    const [isRemoteSharing, setIsRemoteSharing] = useState(false);
-
     const [muted, setMuted] = useState(false);
     const [videoOff, setVideoOff] = useState(false);
+    const [isLocalSharing, setIsLocalSharing] = useState(false);
+    const [isRemoteSharing, setIsRemoteSharing] = useState(false);
 
     const peer = useRef<RTCPeerConnection | null>(null);
 
@@ -126,89 +129,79 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
     };
 
 
-    /* ------------------ SETUP CALL ------------------ */
+    /* ------------------ START WEBCAM + JOIN ------------------ */
     useEffect(() => {
         socket.emit("join-room", roomId);
 
         const start = async () => {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: true,
-                audio: true,
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                setLocalStream(stream);
+
+                selfReady.current = true;
+                socket.emit("ready", roomId);         // 🔥 announce readiness
+
+                initPeer();
+            } catch {
+                console.warn("User didn't allow media — waiting...");
+            }
+
+            // ---------------- ROOM EVENTS ----------------
+
+            socket.on("room-user-count", c => setUserCount(c));
+
+            socket.on("peer-ready", () => {
+                remoteReady.current = true;
+                console.log("🔥 Remote peer is now ready for call");
+
+                if (selfReady.current && !offerSent.current) sendOffer();
             });
 
-            setLocalStream(stream);
-            initPeer();
-
-
-            socket.on("user-joined", async () => {
-                console.log("📥 New user joined", localStream);
-                remotePresent.current = true;
-                if (!peer.current || peer.current.signalingState === "closed") initPeer();
-                if (!trackAdded.current) return
-                if ((remotePresent.current || userCount > 1) && !offerSent.current) {
-                    offerSent.current = true;
-                    sendOffer();
-                }
-
-            });
-
-            socket.on("room-user-count", count => { setUserCount(count); console.log("👥 Room user count:", count); });
+            socket.on("user-joined", () => console.log("🔵 Someone joined room"));
 
             socket.on("offer", async offer => {
-                console.log("📡 Offer Recieved");
-                if (!peer.current || peer.current.signalingState === "closed") initPeer();
+                if (!peer.current) initPeer();
                 await peer.current!.setRemoteDescription(offer);
+
                 const answer = await peer.current!.createAnswer();
                 await peer.current!.setLocalDescription(answer);
                 socket.emit("answer", { roomId, answer });
-                console.log("📡 Offer Recieved and Answer Sent");
             });
 
             socket.on("answer", async answer => {
-
-                if (peer.current && peer.current.signalingState !== "closed")
-                    await peer.current.setRemoteDescription(answer);
-                console.log("📡 Answer Recieved");
+                if (peer.current) await peer.current.setRemoteDescription(answer);
             });
 
-            socket.on("ice-candidate", (candidate) => {
-                if (peer.current && peer.current.signalingState !== "closed")
-                    peer.current.addIceCandidate(candidate);
+            socket.on("ice-candidate", cand => {
+                if (peer.current) peer.current.addIceCandidate(cand);
             });
 
             socket.on("user-left", () => {
-                console.log("📤 User left the room");
                 setRemoteStream(null);
-                setIsRemoteSharing(false);
                 peer.current?.close();
                 peer.current = null;
-                setUserCount(prev => prev - 1);
+                offerSent.current = false;
+                remoteReady.current = false;
             });
-
-            socket.on("screen-stopped", () => setIsRemoteSharing(false));
         };
 
         start();
 
         return () => {
-            socket.off("user-joined");
-            socket.off("offer");
-            socket.off("answer");
-            socket.off("ice-candidate");
-            socket.off("user-left");
-            socket.off("screen-stopped");
-            peer.current?.close();
-            peer.current = null;
+            socket.disconnect();
         };
     }, [roomId]);
 
 
+    /* ---------------- WHEN WE FINALLY GET PERMISSION ---------------- */
     useEffect(() => {
-        if (!localStream || !peer.current) return;
-        if (!trackAdded.current) {
-            localStream.getTracks().forEach(track => peer.current!.addTrack(track, localStream));
-            trackAdded.current = true;
-        }
+        if (!localStream) return;
+        localStream.getTracks().forEach(t => peer.current?.addTrack(t, localStream));
+
+        selfReady.current = true;
+        socket.emit("ready", roomId);                     // 🔥 first time enabling webcam
+
+        if (selfReady.current && remoteReady.current && !offerSent.current) sendOffer();
     }, [localStream]);
 
 
@@ -223,31 +216,19 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
             audioTrack.enabled = true;
         }
 
-        if ((remotePresent.current || userCount > 1) && !offerSent.current) {
-            offerSent.current = true;
-            sendOffer();
-        }
-
     }, [userCount, localStream]);
 
-
+    /* ---------------------- SEND OFFER ---------------------- */
     const sendOffer = async () => {
-        if (!peer.current || peer.current.signalingState === "closed") {
-            console.log("⚙ Re-initializing peer before sending offer");
-            initPeer();         // <-- recreate RTCPeerConnection
-        }
+        if (!peer.current) initPeer();
 
-        try {
-            const offer = await peer.current!.createOffer();
-            await peer.current!.setLocalDescription(offer);
+        const offer = await peer.current!.createOffer();
+        await peer.current!.setLocalDescription(offer);
 
-            socket.emit("offer", { roomId, offer });
-            offerSent.current = true;
+        socket.emit("offer", { roomId, offer });
+        offerSent.current = true;
 
-            console.log("📡 Offer Sent!");
-        } catch (err) {
-            console.error("Offer failed →", err);
-        }
+        console.log("📡 OFFER SENT TO PEER");
     };
 
 
