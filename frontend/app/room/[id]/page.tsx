@@ -102,6 +102,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
        🔥  initPeer extracted outside useEffect (your request)
        -------------------------------------------------------- */
     const initPeer = () => {
+        console.log("🔵 Initializing new RTCPeerConnection");
         const pc = new RTCPeerConnection({
             iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }],
         });
@@ -132,14 +133,16 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
     /* ------------------ START WEBCAM + JOIN ------------------ */
     useEffect(() => {
         socket.emit("join-room", roomId);
-
+        console.log("🔵 Joined room:", roomId);
         const start = async () => {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                 setLocalStream(stream);
-
-                selfReady.current = true;
-                socket.emit("ready", roomId);         // 🔥 announce readiness
+                if (stream) {
+                    selfReady.current = true;
+                    socket.emit("ready", roomId);
+                    console.log("🔥 Local peer is now ready for call");
+                }      // 🔥 announce readiness
 
                 initPeer();
             } catch {
@@ -160,20 +163,25 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
             socket.on("user-joined", () => console.log("🔵 Someone joined room"));
 
             socket.on("offer", async offer => {
+                console.log("📡 OFFER RECEIVED FROM PEER");
                 if (!peer.current) initPeer();
                 await peer.current!.setRemoteDescription(offer);
-
+                console.log("🔵 Creating and sending ANSWER");
                 const answer = await peer.current!.createAnswer();
                 await peer.current!.setLocalDescription(answer);
+                console.log("📡 ANSWER SENT TO PEER");
                 socket.emit("answer", { roomId, answer });
+                console.log("🔥 Call established!");
             });
 
             socket.on("answer", async answer => {
                 if (peer.current) await peer.current.setRemoteDescription(answer);
+                console.log("🔥 Call established! 2");
             });
 
             socket.on("ice-candidate", cand => {
                 if (peer.current) peer.current.addIceCandidate(cand);
+                console.log("🔵 ICE CANDIDATE added");
             });
 
             socket.on("user-left", () => {
@@ -182,6 +190,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
                 peer.current = null;
                 offerSent.current = false;
                 remoteReady.current = false;
+                console.log("🔴 Remote Peer disconnected")
             });
         };
 
@@ -196,12 +205,18 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
     /* ---------------- WHEN WE FINALLY GET PERMISSION ---------------- */
     useEffect(() => {
         if (!localStream) return;
+
         localStream.getTracks().forEach(t => peer.current?.addTrack(t, localStream));
+        if (!selfReady.current) {
+            selfReady.current = true;
+            socket.emit("ready", roomId);
+            console.log("🔥 Local peer is now ready for call 2");
+        }                 // 🔥 first time enabling webcam
 
-        selfReady.current = true;
-        socket.emit("ready", roomId);                     // 🔥 first time enabling webcam
-
-        if (selfReady.current && remoteReady.current && !offerSent.current) sendOffer();
+        if (selfReady.current && remoteReady.current && !offerSent.current) {
+            console.log("🔥 Both peers ready, sending offer... 2");
+            sendOffer()
+        };
     }, [localStream]);
 
 
