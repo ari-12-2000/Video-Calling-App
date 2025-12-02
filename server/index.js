@@ -43,6 +43,14 @@ io.on("connection", (socket) => {
   socket.on("screen-stopped", (roomId) => {
     socket.to(roomId).emit("screen-stopped");
   });
+
+  socket.on("send-message", ({ roomId, message }) => {
+    socket.to(roomId).emit("receive-message", {
+      message,
+      sender: socket.id,
+      timestamp: Date.now()
+    });
+  });
 });
 server.listen(5000, () => {
   console.log("Signaling server running on http://localhost:5000");

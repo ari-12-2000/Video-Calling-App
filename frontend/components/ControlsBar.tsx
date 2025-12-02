@@ -22,7 +22,7 @@ export default function ControlsBar({
   onEndCall,
 }: any) {
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+    <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50">
       <div className="bg-white/95 backdrop-blur-lg px-4 py-3 rounded-full shadow-2xl flex items-center gap-4 border border-gray-300">
 
         {/* Mic */}
