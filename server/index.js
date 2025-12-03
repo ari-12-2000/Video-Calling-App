@@ -48,7 +48,7 @@ io.on("connection", (socket) => {
     socket.to(roomId).emit("receive-message", {
       message,
       sender: socket.id,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   });
 });
