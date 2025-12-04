@@ -1,4 +1,4 @@
-📹 WebRTC Video Calling App (Not more than two persons)               Link- https://video-calling-app-drab.vercel.app
+📹 WebRTC Video Calling App Link- https://video-calling-app-drab.vercel.app
 
 A real-time peer-to-peer (P2P) video calling application built using:
 
