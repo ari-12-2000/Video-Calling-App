@@ -209,7 +209,14 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
         }
         start()
         return () => {
-            socket.disconnect()
+            socket.off("room-user-count");
+            socket.off("peer-ready");
+            socket.off("user-joined");
+            socket.off("offer");
+            socket.off("answer");
+            socket.off("ice-candidate");
+            socket.off("user-left");
+            socket.off("receive-message");
         }
     }, [roomId])
 
