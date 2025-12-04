@@ -101,7 +101,34 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
     const initPeer = () => {
         console.log("🔵 Initializing new RTCPeerConnection")
         const pc = new RTCPeerConnection({
-            iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }],
+            iceServers: [{ urls: "stun:stun.l.google.com:19302" },
+            { urls: "stun:stun1.l.google.com:19302" },
+            { urls: "stun:stun2.l.google.com:19302" },
+            { urls: "stun:stun3.l.google.com:19302" },
+            { urls: "stun:stun4.l.google.com:19302" },
+            { urls: "stun:stun.stunprotocol.org:3478" },
+            { urls: "stun:stun.services.mozilla.com" },
+            {
+                urls: "turn:global.relay.metered.ca:80",
+                username: "57611b776b255e4c878c6c7f",
+                credential: "MKmGM/mPSOQnH37y",
+            },
+            {
+                urls: "turn:global.relay.metered.ca:80?transport=tcp",
+                username: "57611b776b255e4c878c6c7f",
+                credential: "MKmGM/mPSOQnH37y",
+            },
+            {
+                urls: "turn:global.relay.metered.ca:443",
+                username: "57611b776b255e4c878c6c7f",
+                credential: "MKmGM/mPSOQnH37y",
+            },
+            {
+                urls: "turns:global.relay.metered.ca:443?transport=tcp",
+                username: "57611b776b255e4c878c6c7f",
+                credential: "MKmGM/mPSOQnH37y",
+            },
+            ],
         })
         peer.current = pc
         if (localStream && !trackAdded.current) {
@@ -284,8 +311,8 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
                                 <div key={i} className={`flex ${m.sender === "me" ? "justify-end" : "justify-start"}`}>
                                     <div
                                         className={`max-w-[70%] px-6 py-2 rounded-lg ${m.sender === "me"
-                                                ? "bg-primary text-primary-foreground rounded-br-none"
-                                                : "bg-muted text-muted-foreground rounded-bl-none"
+                                            ? "bg-primary text-primary-foreground rounded-br-none"
+                                            : "bg-muted text-muted-foreground rounded-bl-none"
                                             }`}
                                     >
                                         <p className="text-sm wrap-break-word whitespace-pre-wrap">{m.message}</p>
