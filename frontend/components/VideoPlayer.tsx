@@ -8,11 +8,14 @@ export default function VideoPlayer({
   small = false,
   muted = false,
   videoOff = false,
+  remoteOrientation,
 }: {
   stream: MediaStream | null;
   small?: boolean;
   muted?: boolean;
   videoOff?: boolean;
+  remoteOrientation?: "portrait" | "landscape"
+
 }) {
   const ref = useRef<HTMLVideoElement | null>(null);
 
@@ -39,7 +42,9 @@ export default function VideoPlayer({
       playsInline
       muted={muted}
       className={`bg-black rounded-lg object-cover 
-        ${small ? "w-36 h-24" : "w-full h-full"}
+        ${small ? "h-24" : "h-full"} ${remoteOrientation && remoteOrientation === "portrait"
+      ? "aspect-9/16"
+      : small ? "aspect-video" : "w-full"}
       `}
     />
   );

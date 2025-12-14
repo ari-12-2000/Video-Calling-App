@@ -268,9 +268,9 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
                 {/* BIG VIDEO DISPLAY */}
                 <div className="relative flex-1 flex items-center justify-center bg-card rounded-lg overflow-hidden border border-border/50 shadow-2xl">
                     {isRemoteSharing ? (
-                        <VideoPlayer stream={remoteStream} />
+                        <VideoPlayer stream={remoteStream} remoteOrientation={remoteOrientation}/>
                     ) : userCount > 1 ? (
-                        <VideoPlayer stream={remoteStream} />
+                        <VideoPlayer stream={remoteStream} remoteOrientation={remoteOrientation}/>
                     ) : (
                         <VideoPlayer stream={localStream} videoOff={videoOff} />
                     )}
