@@ -29,7 +29,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
     const [messages, setMessages] = useState<{ sender: string; message: string; time: number }[]>([])
     const [chatOpen, setChatOpen] = useState(false)
     const [input, setInput] = useState("")
-
+    const [remoteOrientation, setRemoteOrientation] = useState<"portrait" | "landscape">("landscape");
     const peer = useRef<RTCPeerConnection | null>(null)
 
     const endCall = () => {
@@ -138,7 +138,13 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
         }
         pc.ontrack = (e) => {
             const incoming = e.streams[0]
-            if (incoming.getVideoTracks()[0]?.label.includes("screen")) {
+            const track = incoming.getVideoTracks()[0];
+            const { width, height } = track?.getSettings();
+
+            if (width && height) {
+                setRemoteOrientation(height > width ? "portrait" : "landscape");
+            }
+            if (track?.label.includes("screen")) {
                 setIsRemoteSharing(true)
                 setIsLocalSharing(false)
             } else {
