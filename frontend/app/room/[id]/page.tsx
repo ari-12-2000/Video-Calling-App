@@ -143,6 +143,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
             const { width, height } = track?.getSettings();
 
             if (width && height) {
+                console.log(height > width ? "portrait" : "landscape");
                 setRemoteOrientation(height > width ? "portrait" : "landscape");
             }
             if (track?.label.includes("screen")) {

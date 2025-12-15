@@ -26,10 +26,17 @@ export default function VideoPlayer({
     }
   }, [stream, videoOff]);
 
+  const orientationClass =
+  remoteOrientation === "portrait"
+    ? "aspect-9/16"
+    : remoteOrientation === "landscape"
+    ? "aspect-video"
+    : "w-full";
+
   // fallback UI when no stream (camera off / waiting / no permission)
   if (!stream || videoOff) {
     return (
-      <div className="w-full h-full grid items-center bg-black rounded-lg">
+      <div className={`h-full ${orientationClass} grid items-center bg-black rounded-lg`}>
         <FallbackAvatar />
       </div>
     );
@@ -41,7 +48,7 @@ export default function VideoPlayer({
       autoPlay
       playsInline
       muted={muted}
-      className={`bg-black rounded-lg object-cover h-full ${remoteOrientation && remoteOrientation === "portrait" ? "aspect-9/16":"w-full"}`}
+      className={`bg-black rounded-lg object-cover h-full ${orientationClass}`}
     />
   );
 }
