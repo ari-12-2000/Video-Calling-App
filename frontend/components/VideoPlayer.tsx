@@ -36,7 +36,7 @@ export default function VideoPlayer({
   // fallback UI when no stream (camera off / waiting / no permission)
   if (!stream || videoOff) {
     return (
-      <div className={`h-full ${orientationClass} grid items-center bg-black rounded-lg`}>
+      <div className={`h-full w-full grid items-center bg-black rounded-lg`}>
         <FallbackAvatar />
       </div>
     );

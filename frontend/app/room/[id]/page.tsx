@@ -140,6 +140,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
         pc.ontrack = (e) => {
             const incoming = e.streams[0]
             const track = incoming.getVideoTracks()[0];
+            console.log( track?.getSettings())
             const { width, height } = track?.getSettings();
 
             if (width && height) {
@@ -266,7 +267,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
     return (
         <div className="relative h-screen bg-background text-foreground dark overflow-hidden">
             {/* MAIN VIDEO AREA */}
-            <div className="h-full w-full flex flex-col md:flex-row gap-0 md:gap-3 md:p-4">
+            <div className={`h-full flex flex-col md:flex-row gap-0 md:gap-3 md:p-4`}>
                 {/* BIG VIDEO DISPLAY */}
                 <div className="relative flex-1 flex items-center justify-center bg-card rounded-lg overflow-hidden border border-border/50 shadow-2xl">
                     {isRemoteSharing ? (
@@ -279,7 +280,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
 
                     {/* SELF PREVIEW PIP */}
                     {(someoneIsSharing || userCount > 1) && (
-                        <div className="absolute bottom-4 right-4 w-auto h-44 md:h-80 rounded-xl overflow-hidden border-2 border-primary/30 shadow-2xl hover:border-primary/50 transition-colors">
+                        <div className="absolute bottom-4 right-4 h-44 md:h-80 rounded-xl overflow-hidden border-2 border-primary/30 shadow-2xl hover:border-primary/50 transition-colors">
                             <VideoPlayer stream={localStream} muted videoOff={videoOff} small={true} />
                         </div>
                     )}
