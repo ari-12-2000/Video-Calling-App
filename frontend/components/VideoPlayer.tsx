@@ -27,25 +27,21 @@ export default function VideoPlayer({
   }, [stream, videoOff]);
 
   // fallback UI when no stream (camera off / waiting / no permission)
-  if (!stream|| videoOff) {
+  if (!stream || videoOff) {
     return (
       <div className="w-full h-full grid items-center bg-black rounded-lg">
         <FallbackAvatar />
       </div>
     );
   }
-  
+
   return (
     <video
       ref={ref}
       autoPlay
       playsInline
       muted={muted}
-      className={`bg-black rounded-lg object-cover 
-        ${small ? "h-24" : "h-full"} ${remoteOrientation && remoteOrientation === "portrait"
-      ? "aspect-9/16"
-      : small ? "aspect-video" : "w-full"}
-      `}
+      className={`bg-black rounded-lg object-cover h-full ${remoteOrientation && remoteOrientation === "portrait" ? "aspect-9/16":"w-full"}`}
     />
   );
 }

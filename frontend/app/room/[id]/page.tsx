@@ -42,7 +42,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
     }
 
     const toggleMute = () => {
-        if (!localStream) return
+        if (!localStream || userCount <= 1) return
         localStream.getAudioTracks().forEach((t) => (t.enabled = !t.enabled))
         setMuted((m) => !m)
     }
@@ -277,8 +277,8 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
 
                     {/* SELF PREVIEW PIP */}
                     {(someoneIsSharing || userCount > 1) && (
-                        <div className="absolute bottom-4 right-4 w-32 h-44 md:w-56 md:h-80 rounded-xl overflow-hidden border-2 border-primary/30 shadow-2xl hover:border-primary/50 transition-colors">
-                            <VideoPlayer stream={localStream} muted videoOff={videoOff} />
+                        <div className="absolute bottom-4 right-4 w-auto h-44 md:h-80 rounded-xl overflow-hidden border-2 border-primary/30 shadow-2xl hover:border-primary/50 transition-colors">
+                            <VideoPlayer stream={localStream} muted videoOff={videoOff} small={true}/>
                         </div>
                     )}
                 </div>
