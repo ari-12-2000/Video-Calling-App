@@ -5,14 +5,12 @@ import FallbackAvatar from "./FallbackAvatar";
 
 export default function VideoPlayer({
   stream,
-  small = false,
   muted = false,
   videoOff = false,
   remoteOrientation,
   onOrientationChange,
 }: {
   stream: MediaStream | null;
-  small?: boolean;
   muted?: boolean;
   videoOff?: boolean;
   remoteOrientation?: "portrait" | "landscape";
@@ -58,7 +56,7 @@ export default function VideoPlayer({
       autoPlay
       playsInline
       muted={muted}
-      className={`bg-black rounded-lg object-cover h-full ${orientationClass}`}
+      className={`bg-black rounded-lg object-cover h-full ${orientationClass} ${remoteOrientation === "landscape"? 'max-sm:h-[50vh]':''}` }
     />
   );
 }
