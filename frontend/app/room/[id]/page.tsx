@@ -42,8 +42,9 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
     }
 
     const toggleMute = () => {
-        if (!localStream || userCount <= 1) return
-        localStream.getAudioTracks().forEach((t) => (t.enabled = !t.enabled))
+        if (!localStream) return
+        if (userCount > 1)
+            localStream.getAudioTracks().forEach((t) => (t.enabled = !t.enabled))
         setMuted((m) => !m)
     }
 
@@ -268,9 +269,9 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
                 {/* BIG VIDEO DISPLAY */}
                 <div className="relative flex-1 flex items-center justify-center bg-card rounded-lg overflow-hidden border border-border/50 shadow-2xl">
                     {isRemoteSharing ? (
-                        <VideoPlayer stream={remoteStream} remoteOrientation={remoteOrientation}/>
+                        <VideoPlayer stream={remoteStream} remoteOrientation={remoteOrientation} />
                     ) : userCount > 1 ? (
-                        <VideoPlayer stream={remoteStream} remoteOrientation={remoteOrientation}/>
+                        <VideoPlayer stream={remoteStream} remoteOrientation={remoteOrientation} />
                     ) : (
                         <VideoPlayer stream={localStream} videoOff={videoOff} />
                     )}
@@ -278,7 +279,7 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
                     {/* SELF PREVIEW PIP */}
                     {(someoneIsSharing || userCount > 1) && (
                         <div className="absolute bottom-4 right-4 w-auto h-44 md:h-80 rounded-xl overflow-hidden border-2 border-primary/30 shadow-2xl hover:border-primary/50 transition-colors">
-                            <VideoPlayer stream={localStream} muted videoOff={videoOff} small={true}/>
+                            <VideoPlayer stream={localStream} muted videoOff={videoOff} small={true} />
                         </div>
                     )}
                 </div>
