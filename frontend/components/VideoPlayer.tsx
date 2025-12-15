@@ -9,12 +9,14 @@ export default function VideoPlayer({
   muted = false,
   videoOff = false,
   remoteOrientation,
+  onOrientationChange,
 }: {
   stream: MediaStream | null;
   small?: boolean;
   muted?: boolean;
   videoOff?: boolean;
-  remoteOrientation?: "portrait" | "landscape"
+  remoteOrientation?: "portrait" | "landscape";
+  onOrientationChange?: (o: "portrait" | "landscape") => void;
 
 }) {
   const ref = useRef<HTMLVideoElement | null>(null);
@@ -23,20 +25,28 @@ export default function VideoPlayer({
     if (ref.current && stream && !videoOff) {
       ref.current.srcObject = stream;
       console.log("🎥 Video stream attached.");
+      const handleLoadedMetadata = () => {
+        const video = ref.current!;
+        const orientation =
+          video.videoHeight > video.videoWidth ? "portrait" : "landscape";
+
+        onOrientationChange?.(orientation);
+      };
+      ref.current.onloadedmetadata = handleLoadedMetadata;
     }
   }, [stream, videoOff]);
 
   const orientationClass =
-  remoteOrientation === "portrait"
-    ? "aspect-9/16"
-    : remoteOrientation === "landscape"
-    ? "aspect-video"
-    : "w-full";
+    remoteOrientation === "portrait"
+      ? "aspect-9/16"
+      : remoteOrientation === "landscape"
+        ? "aspect-video"
+        : "w-full";
 
   // fallback UI when no stream (camera off / waiting / no permission)
   if (!stream || videoOff) {
     return (
-      <div className={`h-full w-full grid items-center bg-black rounded-lg`}>
+      <div className={`h-full aspect-9/16 grid items-center bg-black rounded-lg`}>
         <FallbackAvatar />
       </div>
     );

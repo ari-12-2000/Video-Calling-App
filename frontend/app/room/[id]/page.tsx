@@ -140,13 +140,6 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
         pc.ontrack = (e) => {
             const incoming = e.streams[0]
             const track = incoming.getVideoTracks()[0];
-            console.log( track?.getSettings())
-            const { width, height } = track?.getSettings();
-
-            if (width && height) {
-                console.log(height > width ? "portrait" : "landscape");
-                setRemoteOrientation(height > width ? "portrait" : "landscape");
-            }
             if (track?.label.includes("screen")) {
                 setIsRemoteSharing(true)
                 setIsLocalSharing(false)
@@ -271,16 +264,16 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
                 {/* BIG VIDEO DISPLAY */}
                 <div className="relative flex-1 flex items-center justify-center bg-card rounded-lg overflow-hidden border border-border/50 shadow-2xl">
                     {isRemoteSharing ? (
-                        <VideoPlayer stream={remoteStream} remoteOrientation={remoteOrientation} />
+                        <VideoPlayer stream={remoteStream} remoteOrientation={remoteOrientation} onOrientationChange={(o) => setRemoteOrientation(o)}/>
                     ) : userCount > 1 ? (
-                        <VideoPlayer stream={remoteStream} remoteOrientation={remoteOrientation} />
+                        <VideoPlayer stream={remoteStream} remoteOrientation={remoteOrientation} onOrientationChange={(o) => setRemoteOrientation(o)}/>
                     ) : (
                         <VideoPlayer stream={localStream} videoOff={videoOff} />
                     )}
 
                     {/* SELF PREVIEW PIP */}
                     {(someoneIsSharing || userCount > 1) && (
-                        <div className="absolute bottom-4 right-4 h-44 md:h-80 rounded-xl overflow-hidden border-2 border-primary/30 shadow-2xl hover:border-primary/50 transition-colors">
+                        <div className="absolute bottom-4 right-4 h-28 sm:h-32 md:h-44 lg:h-80 rounded-xl overflow-hidden border-2 border-primary/30 shadow-2xl hover:border-primary/50 transition-colors">
                             <VideoPlayer stream={localStream} muted videoOff={videoOff} small={true} />
                         </div>
                     )}
