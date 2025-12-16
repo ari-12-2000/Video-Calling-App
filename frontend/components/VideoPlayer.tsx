@@ -44,7 +44,7 @@ export default function VideoPlayer({
   // fallback UI when no stream (camera off / waiting / no permission)
   if (!stream || videoOff) {
     return (
-      <div className={`h-full aspect-9/16 grid items-center bg-black rounded-lg ${remoteOrientation === "landscape"? 'max-sm:h-[50vh] -translate-y-[50%]':''}`}>
+      <div className={`h-full aspect-9/16 grid items-center bg-black rounded-lg ${remoteOrientation === "landscape"? 'max-sm:h-[50vh] -translate-y-[25%]':''}`}>
         <FallbackAvatar />
       </div>
     );
@@ -56,7 +56,7 @@ export default function VideoPlayer({
       autoPlay
       playsInline
       muted={muted}
-      className={`bg-black rounded-lg object-cover h-full ${orientationClass} ${remoteOrientation === "landscape"? 'max-sm:h-[50vh] -translate-y-[50%]':''}` }
+      className={`bg-black rounded-lg object-cover h-full ${orientationClass} ${remoteOrientation === "landscape"? 'max-sm:h-[50vh] -translate-y-[25%]':''}` }
     />
   );
 }
