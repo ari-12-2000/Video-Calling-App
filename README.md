@@ -37,7 +37,8 @@ cd frontend
 npm install
 npm run dev
 
-<img width="1700" height="1039" alt="image" src="https://github.com/user-attachments/assets/3b49b31f-9969-4205-9197-0fc91bcfae0b" />
+<img width="446" height="275" alt="image" src="https://github.com/user-attachments/assets/a4fc7411-4065-4c20-b01d-b3f63bb72141" />
+
 
 <img width="446" height="275" alt="image" src="https://github.com/user-attachments/assets/7b3c272d-8649-45e1-b9ea-8f6d33fd86d1" />
 
