@@ -18,7 +18,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("ready", (roomId) => {
-    socket.to(roomId).emit("peer-ready");
+    socket.to(roomId).emit("peer-ready", socket.id);
   });
   socket.on("offer", ({ roomId, offer }) => {
     socket.to(roomId).emit("offer", offer);

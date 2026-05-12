@@ -18,7 +18,6 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
     const remoteReady = useRef(false)
     const offerSent = useRef(false)
     const [userCount, setUserCount] = useState(0)
-    const trackAdded = useRef(false)
 
     const [localStream, setLocalStream] = useState<MediaStream | null>(null)
     const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null)
@@ -55,31 +54,39 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
     }
 
     const startScreenShare = async () => {
-        if (!peer.current) return
-        const screen = await navigator.mediaDevices.getDisplayMedia({
-            video: true,
-        })
-        const screenTrack = screen.getVideoTracks()[0]
-        const sender = peer.current.getSenders().find((s) => s.track?.kind === "video")
-        await sender?.replaceTrack(screenTrack)
-        setIsLocalSharing(true)
-        setIsRemoteSharing(false)
-        screenTrack.onended = () => {
-            stopScreenShare()
+        try {
+            if (!peer.current) return
+            const screen = await navigator.mediaDevices.getDisplayMedia({
+                video: true,
+            })
+            const screenTrack = screen.getVideoTracks()[0]
+            const sender = peer.current.getSenders().find((s) => s.track?.kind === "video")
+            await sender?.replaceTrack(screenTrack)
+            setIsLocalSharing(true)
+            setIsRemoteSharing(false)
+            screenTrack.onended = () => {
+                stopScreenShare()
+            }
+        } catch (err) {
+            console.error("❌ Failed to start screen sharing", err)
         }
     }
 
     const stopScreenShare = async () => {
-        if (!peer.current || !localStream) return
-        peer.current.getSenders().forEach((sender) => {
-            if (sender.track && sender.track.label.includes("screen")) {
-                sender.track.stop()
-                const camTrack = localStream.getVideoTracks()[0]
-                sender.replaceTrack(camTrack)
-            }
-        })
-        setIsLocalSharing(false)
-        socket.emit("screen-stopped", roomId)
+        try {
+            if (!peer.current || !localStream) return
+            peer.current.getSenders().forEach((sender) => {
+                if (sender.track && sender.track.label.includes("screen")) {
+                    sender.track.stop()
+                    const camTrack = localStream.getVideoTracks()[0]
+                    sender.replaceTrack(camTrack)
+                }
+            })
+            setIsLocalSharing(false)
+            socket.emit("screen-stopped", roomId)
+        } catch (err) {
+            console.error("❌ Failed to stop screen sharing", err)
+        }
     }
 
     const sendMessage = () => {
@@ -132,9 +139,8 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
             ],
         })
         peer.current = pc
-        if (localStream && !trackAdded.current) {
+        if (localStream) {
             localStream.getTracks().forEach((track) => pc.addTrack(track, localStream))
-            trackAdded.current = true
             console.log("🔥 Added local tracks to new peer connection")
         }
         pc.ontrack = (e) => {
@@ -162,36 +168,46 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
                 setLocalStream(stream)
                 if (stream) {
-                    selfReady.current = true
-                    socket.emit("ready", roomId)
-                    console.log("🔥 Local peer is now ready for call")
+
+                    console.log("🔥 Local peer is now ready with video for the call")
                 }
-                initPeer()
+
+
             } catch {
                 console.warn("User didn't allow media — waiting...")
             }
-
+            selfReady.current = true
+            socket.emit("ready", roomId)
+            initPeer()
             socket.on("room-user-count", (c) => setUserCount(c))
-            socket.on("peer-ready", () => {
+            socket.on("peer-ready", (remoteId) => {
                 remoteReady.current = true
                 console.log("🔥 Remote peer is now ready for call")
-                if (selfReady.current && !offerSent.current) sendOffer()
+                if (selfReady.current && !offerSent.current && socket.id! < remoteId) sendOffer()
             })
             socket.on("user-joined", () => console.log("🔵 Someone joined room"))
             socket.on("offer", async (offer) => {
-                console.log("📡 OFFER RECEIVED FROM PEER")
-                if (!peer.current) initPeer()
-                await peer.current!.setRemoteDescription(offer)
-                console.log("🔵 Creating and sending ANSWER")
-                const answer = await peer.current!.createAnswer()
-                await peer.current!.setLocalDescription(answer)
-                console.log("📡 ANSWER SENT TO PEER")
-                socket.emit("answer", { roomId, answer })
-                console.log("🔥 Call established!")
+                try {
+                    console.log("📡 OFFER RECEIVED FROM PEER")
+                    if (!peer.current) initPeer()
+                    await peer.current!.setRemoteDescription(offer)
+                    console.log("🔵 Creating and sending ANSWER")
+                    const answer = await peer.current!.createAnswer()
+                    await peer.current!.setLocalDescription(answer)
+                    console.log("📡 ANSWER SENT TO PEER")
+                    socket.emit("answer", { roomId, answer })
+                    console.log("🔥 Call established!")
+                } catch (err) {
+                    console.error("❌ Failed handling offer", err)
+                }
             })
             socket.on("answer", async (answer) => {
-                if (peer.current) await peer.current.setRemoteDescription(answer)
-                console.log("🔥 Call established! 2")
+                try {
+                    if (peer.current) await peer.current.setRemoteDescription(answer)
+                    console.log("🔥 Call established! 2")
+                } catch (err) {
+                    console.error("❌ Failed handling answer", err)
+                }
             })
             socket.on("ice-candidate", (cand) => {
                 if (peer.current) peer.current.addIceCandidate(cand)
@@ -247,12 +263,16 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
     }, [userCount, localStream])
 
     const sendOffer = async () => {
-        if (!peer.current) initPeer()
-        const offer = await peer.current!.createOffer()
-        await peer.current!.setLocalDescription(offer)
-        socket.emit("offer", { roomId, offer })
-        offerSent.current = true
-        console.log("📡 OFFER SENT TO PEER")
+        try {
+            if (!peer.current) initPeer()
+            const offer = await peer.current!.createOffer()
+            await peer.current!.setLocalDescription(offer)
+            socket.emit("offer", { roomId, offer })
+            offerSent.current = true
+            console.log("📡 OFFER SENT TO PEER")
+        } catch (err) {
+            console.error("❌ Failed creating/sending offer", err)
+        }
     }
 
     const someoneIsSharing = isLocalSharing || isRemoteSharing
@@ -264,9 +284,9 @@ export default function Room({ params }: { params: Promise<{ id: string }> }) {
                 {/* BIG VIDEO DISPLAY */}
                 <div className="relative flex-1 flex items-center justify-center bg-card rounded-lg overflow-hidden border border-border/50 shadow-2xl">
                     {isRemoteSharing ? (
-                        <VideoPlayer stream={remoteStream} remoteOrientation={remoteOrientation} onOrientationChange={(o) => setRemoteOrientation(o)}/>
+                        <VideoPlayer stream={remoteStream} remoteOrientation={remoteOrientation} onOrientationChange={(o) => setRemoteOrientation(o)} />
                     ) : userCount > 1 ? (
-                        <VideoPlayer stream={remoteStream} remoteOrientation={remoteOrientation} onOrientationChange={(o) => setRemoteOrientation(o)}/>
+                        <VideoPlayer stream={remoteStream} remoteOrientation={remoteOrientation} onOrientationChange={(o) => setRemoteOrientation(o)} />
                     ) : (
                         <VideoPlayer stream={localStream} videoOff={videoOff} />
                     )}
