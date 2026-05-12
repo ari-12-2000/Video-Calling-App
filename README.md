@@ -1,102 +1,49 @@
-📹 WebRTC Video Calling App Link- https://video-calling-app-drab.vercel.app
 
-A real-time peer-to-peer (P2P) video calling application built using:
 
-Next.js 15 (App Router)
+## Meetly — WebRTC One-to-One Video Calling App
 
-WebRTC (P2P audio/video + screen sharing)
+🔗 Live Demo: https://video-calling-app-drab.vercel.app  
 
-Socket.IO (signaling server)
+### Features
+- Real-time peer-to-peer video calling using WebRTC  
+- Screen sharing, mute/unmute, camera toggle  
+- Text chat during calls  
+- Dynamic video layout and responsive UI  
+- Robust reconnection handling for network failures  
 
-TypeScript
+### Technical Highlights
+- Implemented custom signaling server using Node.js + Socket.IO  
+- Managed WebRTC lifecycle: offer/answer exchange, ICE candidates, renegotiation  
+- Integrated STUN + TURN servers for reliable NAT traversal  
+- Handled join/leave events, reconnections, and session recovery  
+- Optimized for real-world unstable network conditions  
 
-Tailwind CSS
+### Tech Stack
+Frontend: Next.js, React, Tailwind CSS  
+Backend: Node.js, Socket.IO  
+Protocols: WebRTC (ICE, STUN, TURN)
 
-Lucide Icons
+### How to Run Locally
 
-The app supports 1-to-1 video calls, screen sharing, mute/camera toggle, and a Google Meet–style layout — all implemented with pure WebRTC (no SFU).
+1️⃣ Start backend server
 
-⭐ Features
-🎥 Video & Audio
+cd server
+npm install
+npm start
 
-Real-time P2P video calling using WebRTC
+2️⃣ Start frontend
 
-Auto full-screen when only one participant is present
+cd frontend
+npm install
+npm run dev
 
-Dynamic split-screen when a remote peer joins
+<img width="446" height="275" alt="image" src="https://github.com/user-attachments/assets/a4fc7411-4065-4c20-b01d-b3f63bb72141" />
 
-🖥 Screen Sharing
 
-Share screen with 1 click
+<img width="446" height="275" alt="image" src="https://github.com/user-attachments/assets/7b3c272d-8649-45e1-b9ea-8f6d33fd86d1" />
 
-Remote participant video tiles shrink and move to the right (Google Meet style)
+<img width="1892" height="1074" alt="image" src="https://github.com/user-attachments/assets/64791f59-aeb6-4c06-ad62-65a4addca071" />
 
-Auto-restore camera when screen sharing stops
 
-🎤 Call Controls (Floating Bar)
 
-Mute / Unmute microphone
-
-Hide / Show camera
-
-Start / Stop screen sharing
-
-Chat with your peer
-
-End call (closes stream + RTCPeerConnection)
-
-Controls always stick to bottom center (floating pill design)
-
-🔧 Signaling
-
-Built using Socket.IO
-
-Handles:
-
-join-room
-
-offer / answer (SDP)
-
-ICE candidate exchange
-
-user-left event
-
-📐 Responsive UI
-
-Tailwind CSS
-
-Video players auto-resize
-
-Full mobile support (full-screen mode)
-
-🏗️ Tech Stack
-Frontend
-
-Next.js 15
-
-React + Hooks
-
-Tailwind CSS
-
-lucide-react icons
-
-TypeScript
-
-WebRTC
-
-RTCPeerConnection
-
-STUN server
-
-MediaStreamTrack replaceTrack()
-
-getUserMedia / getDisplayMedia
-
-Backend
-
-Node.js
-
-Express
-
-Socket.IO signaling server
 
